@@ -55,21 +55,6 @@ void handleOnPut() {
   server.send(200, "application/json", server.arg("plain"));
 }
 
-void handleNotFound(){
-  String message = "Page Not Found\n";
-  message += "URI: ";
-  message += server.uri();
-  message += "\nMethod: ";
-  message += (server.method() == HTTP_GET)?"GET":"POST";
-  message += "\nArguments: ";
-  message += server.args();
-  message += "\n";
-  for (uint8_t i=0; i<server.args(); i++){
-    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
-  }
-  server.send(404, "text/plain", message);
-}
-
 void setup(void){
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, ledOn ? LOW : HIGH);
@@ -97,8 +82,6 @@ void setup(void){
   server.on("/properties/on", HTTP_GET, handleOnGet);
   server.on("/properties/on", HTTP_PUT, handleOnPut);
   
-  server.onNotFound(handleNotFound);
-
   server.begin();
   Serial.println("HTTP server started");
 }
