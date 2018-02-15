@@ -21,21 +21,17 @@ bool ledOn = true;
 const String ledDescr = "{\n"
 " \"name\": \"ESP8266 LED\",\n"
 "  \"type\": \"onOffSwitch\",\n"
-"  \"href\": \"/things/led\",\n"
+"  \"href\": \"/\",\n"
 "  \"properties\": {\n"
 "    \"on\": {\n"
 "      \"type\": \"boolean\",\n"
-"      \"href\": \"/things/led/properties/on\"\n"
+"      \"href\": \"/properties/on\"\n"
 "    }\n"
 "  },\n"
 "  \"actions\": {},\n"
 "  \"events\": {}\n"
 "}";
   
-
-void handleThings() {
-  server.send(200, "application/json", "[" + ledDescr + "]");
-}
 
 void handleThing() {
   server.send(200, "application/json", ledDescr);
@@ -97,11 +93,9 @@ void setup(void){
     Serial.println("MDNS responder started");
   }
 
-  server.on("/", handleThings);
-  server.on("/things", handleThings);
-  server.on("/things/led", handleThing);
-  server.on("/things/led/properties/on", HTTP_GET, handleOnGet);
-  server.on("/things/led/properties/on", HTTP_PUT, handleOnPut);
+  server.on("/", handleThing);
+  server.on("/properties/on", HTTP_GET, handleOnGet);
+  server.on("/properties/on", HTTP_PUT, handleOnPut);
   
   server.onNotFound(handleNotFound);
 
