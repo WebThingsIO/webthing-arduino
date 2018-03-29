@@ -84,6 +84,10 @@ void setup(void){
     Serial.println("MDNS responder started");
   }
 
+  MDNS.addService("http", "tcp", 80);
+  MDNS.addServiceTxt("http", "tcp", "url", "http://esp8266.local");
+  MDNS.addServiceTxt("http", "tcp", "webthing", "true");
+
   server.on("/", handleThing);
   server.on("/properties/on", HTTP_GET, handleOnGet);
   server.on("/properties/on", HTTP_PUT, handleOnPut);
