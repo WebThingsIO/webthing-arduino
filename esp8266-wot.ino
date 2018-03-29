@@ -34,6 +34,8 @@ const String ledDescr = "{\n"
   
 
 void handleThing() {
+  server.sendHeader("Access-Control-Allow-Origin", "*", false);
+  server.sendHeader("Access-Control-Allow-Methods", "PUT, GET, OPTIONS", false);
   server.send(200, "application/json", ledDescr);
 }
 
@@ -41,6 +43,8 @@ void handleOnGet() {
   String response = "{\"on\":";
   response += ledOn;
   response += "}";
+  server.sendHeader("Access-Control-Allow-Origin", "*", false);
+  server.sendHeader("Access-Control-Allow-Methods", "PUT, GET, OPTIONS", false);
   server.send(200, "application/json", response);
 }
 
@@ -52,6 +56,8 @@ void handleOnPut() {
     ledOn = newOn;
     digitalWrite(ledPin, ledOn ? LOW : HIGH); // active low led
   }
+  server.sendHeader("Access-Control-Allow-Origin", "*", false);
+  server.sendHeader("Access-Control-Allow-Methods", "PUT, GET, OPTIONS", false);
   server.send(200, "application/json", server.arg("plain"));
 }
 
