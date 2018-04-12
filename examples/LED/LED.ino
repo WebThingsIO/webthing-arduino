@@ -1,14 +1,14 @@
 /**
  * Simple ESP8266 server compliant with Mozilla's proposed WoT API
- *
  * Based on the HelloServer example
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
 #include "Thing.h"
 #include "WebThingAdapter.h"
 
