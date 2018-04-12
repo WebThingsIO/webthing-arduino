@@ -20,7 +20,7 @@ enum ThingPropertyType {
 
 union ThingPropertyValue {
   bool boolean;
-  float number;
+  double number;
   char* string;
 };
 

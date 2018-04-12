@@ -37,8 +37,6 @@ public:
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
       String deviceBase = "/things/" + device->id;
-      Serial.println("deviceBase:");
-      Serial.println(deviceBase);
       server.on(deviceBase, [this, device]() {
         this->handleThing(device);
       });
@@ -168,13 +166,15 @@ private:
 
     switch (property->type) {
     case BOOLEAN: {
-      bool value = newValue.as<bool>();
-      property->setValue({value});
+      ThingPropertyValue value;
+      value.boolean = newValue.as<bool>();
+      property->setValue(value);
       break;
     }
     case NUMBER: {
-      double value = newValue.as<double>();
-      property->setValue({value});
+      ThingPropertyValue value;
+      value.number = newValue.as<double>();
+      property->setValue(value);
       break;
     }
     // TODO: case STRING:
