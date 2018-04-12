@@ -23,8 +23,8 @@ Example
 -------
 
 ```c++
-#include "Thing.h"
-#include "WebThingAdapter.h"
+#include <Thing.h>
+#include <WebThingAdapter.h>
 
 WebThingAdapter adapter("localtoast");
 
