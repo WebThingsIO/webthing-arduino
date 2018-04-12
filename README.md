@@ -5,7 +5,9 @@ A simple server for the ESP8266 that implements Mozilla's proposed Web of
 Things API. The [LED
 example](https://github.com/mozilla-iot/webthing-esp8266/blob/master/examples/LED)
 exposes an onOffSwitch named "Built-in LED" which controls the board's built-in
-LED.
+LED. The [LED Lamp
+example](https://github.com/mozilla-iot/webthing-esp8266/blob/master/examples/LEDLamp)
+ups the ante by introducing a `level` property to expose a dimmableLight.
 
 To run on an ESP8266, download the Arduino IDE and set it up for ESP8266
 development. Make sure to install the ArduinoJson library if you don't have it
@@ -46,16 +48,19 @@ void setup() {
 
 void loop() {
   adapter.update();
-  if (toasterInterface.isToasting()) {
-    toasterOn.setValue({true});
-  } else {
-    toasterOn.setValue({false});
-  }
 
-  toasterTimer.setValue({toasterInterface.getSecondsLeft()});
+  ThingPropertyValue onValue;
+  onValue.boolean = toasterInterface.isToasting();
+  toasterOn.setValue(onValue);
+
+  ThingPropertyValue timerValue;
+  timerValue.number = toasterInterface.getSecondsLeft();
+  toasterTimer.setValue(timerValue);
 
   if (toasterToast.getValue().boolean) {
-    toasterToast.setValue({false});
+    ThingPropertyValue toastValue;
+    toastValue.boolean = false;
+    toasterToast.setValue(toastValue);
     toasterInterface.startToasting();
   }
 }
