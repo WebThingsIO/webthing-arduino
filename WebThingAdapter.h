@@ -149,7 +149,7 @@ private:
       prop[property->id] = property->getValue().number;
       break;
     case STRING:
-      prop[property->id] = property->getValue().string;
+      prop[property->id] = *property->getValue().string;
       break;
     }
     String strBuf;
@@ -160,7 +160,7 @@ private:
   }
 
   void handleThingPropertyPut(ThingProperty* property) {
-    StaticJsonBuffer<128> newBuffer;
+    StaticJsonBuffer<256> newBuffer;
     JsonObject& newProp = newBuffer.parseObject(this->server.arg("plain"));
     JsonVariant newValue = newProp[property->id];
 
@@ -177,7 +177,9 @@ private:
       property->setValue(value);
       break;
     }
-    // TODO: case STRING:
+    case STRING:
+      *property->getValue().string = newValue.as<String>();
+      break;
     }
 
     this->sendCORS();

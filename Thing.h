@@ -21,7 +21,7 @@ enum ThingPropertyType {
 union ThingPropertyValue {
   bool boolean;
   double number;
-  char* string;
+  String* string;
 };
 
 class ThingProperty {
