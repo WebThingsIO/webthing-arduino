@@ -58,5 +58,7 @@ void loop(void){
   if (lampOn.getValue().boolean) {
     int level = map(lampLevel.getValue().number, 0, 100, 255, 0);
     analogWrite(lampPin, level);
+  } else {
+    analogWrite(lampPin, 255);
   }
 }
