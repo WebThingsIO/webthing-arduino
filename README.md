@@ -11,9 +11,16 @@ ups the ante by introducing a `level` property to expose a dimmableLight.
 
 To run on an ESP8266, download the Arduino IDE and set it up for ESP8266
 development. Make sure to install the ArduinoJson library if you don't have it
-installed already. Next, download this a zip of this library and add it using
-your Arduino IDE's Sketch > Include Library > Add ZIP Library option. You
-should be able to upload the example sketch onto your board and use it as a
+installed already.
+
+![ArduinoJson install process](https://github.com/mozilla-iot/webthing-esp8266/raw/master/docs/arduinojson.png)
+
+Next, download this a zip of this library and add it using
+your Arduino IDE's Sketch > Include Library > Add ZIP Library option.
+
+![add zip library and LED example](https://github.com/mozilla-iot/webthing-esp8266/raw/master/docs/add-library-open-example.png)
+
+You should be able to upload the example sketch onto your board and use it as a
 simple Web Thing. This Web Thing can be talked to using the WoT API or added to
 the Mozilla IoT Gateway using the "Add Thing by URL" feature.
 
