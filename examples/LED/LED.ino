@@ -17,7 +17,12 @@ const char* password = "..........";
 
 const int ledPin = LED_BUILTIN;
 
-WebThingAdapter adapter("esp8266");
+#ifdef ESP32
+ESP32WebThingAdapter adapter("esp32");
+#endif
+#ifdef ESP8266
+ESP8266WebThingAdapter adapter("esp8266");
+#endif
 
 ThingDevice led("led", "Built-in LED", "onOffSwitch");
 
