@@ -12,8 +12,9 @@
 #include "Thing.h"
 #include "WebThingAdapter.h"
 
-const char* ssid = "......";
-const char* password = "..........";
+//TODO: Hardcode your wifi credentials here (and keep it private)
+const char* ssid = "public";
+const char* password = "";
 
 const int ledPin = LED_BUILTIN;
 
@@ -28,19 +29,29 @@ ThingDevice led("led", "Built-in LED", "onOffSwitch");
 
 ThingProperty ledOn("on", "", BOOLEAN);
 
+bool lastOn = false;
+
 void setup(void){
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
   Serial.begin(115200);
+  Serial.println("");
+  Serial.print("Connecting to \"");
+  Serial.print(ssid);
+  Serial.println("\"");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("");
 
   // Wait for connection
+  bool blink = true;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    digitalWrite(ledPin, blink ? LOW : HIGH); // active low led
+    blink = !blink;
   }
+  digitalWrite(ledPin, HIGH); // active low led
 
   Serial.println("");
   Serial.print("Connected to ");
@@ -52,9 +63,21 @@ void setup(void){
   adapter.addDevice(&led);
   adapter.begin();
   Serial.println("HTTP server started");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.print("/things/");
+  Serial.println(led.id);
 }
 
 void loop(void){
   adapter.update();
-  digitalWrite(ledPin, ledOn.getValue().boolean ? LOW : HIGH); // active low led
+  bool on = ledOn.getValue().boolean;
+  digitalWrite(ledPin, on ? LOW : HIGH); // active low led
+  if (on != lastOn) {
+    Serial.print(led.id);
+    Serial.print(": ");
+    Serial.println(on);
+  }
+  lastOn = on;
 }
+
