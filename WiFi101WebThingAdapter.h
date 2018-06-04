@@ -11,6 +11,8 @@
 #ifndef MOZILLA_IOT_WIFI101WEBTHINGADAPTER_H
 #define MOZILLA_IOT_WIFI101WEBTHINGADAPTER_H
 
+#if !defined(ESP32) && !defined(ESP8266)
+
 #include <Arduino.h>
 #include <WiFi101.h>
 #include <WiFiUdp.h>
@@ -358,5 +360,7 @@ private:
     }
   }
 };
+
+#endif // neither ESP32 nor ESP8266 defined
 
 #endif // MOZILLA_IOT_WIFI101WEBTHINGADAPTER_H

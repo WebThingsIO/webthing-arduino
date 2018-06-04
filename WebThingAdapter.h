@@ -13,5 +13,6 @@
 
 #include "ESP8266WebThingAdapter.h"
 #include "ESP32WebThingAdapter.h"
+#include "WiFi101WebThingAdapter.h"
 
 #endif
