@@ -7,8 +7,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
 #include "Thing.h"
 #include "WebThingAdapter.h"
 

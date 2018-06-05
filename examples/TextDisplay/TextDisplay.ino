@@ -19,8 +19,6 @@ BSD license, check license.txt for more information
 All text above, and the splash screen must be included in any redistribution
 *********************************************************************/
 
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
 #include <Thing.h>
 #include <WebThingAdapter.h>
 

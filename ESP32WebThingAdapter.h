@@ -14,6 +14,8 @@
 
 #ifdef ESP32
 
+#include <ESP8266WiFi.h> // TODO: maybe unnecessary?
+#include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
