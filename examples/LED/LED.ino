@@ -7,6 +7,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+#include <Arduino.h>
 #include "Thing.h"
 #include "WebThingAdapter.h"
 
@@ -14,14 +15,13 @@
 const char* ssid = "public";
 const char* password = "";
 
+#if defined(LED_BUILTIN)
 const int ledPin = LED_BUILTIN;
+#else
+const int ledPin = 13;  // manully configure LED pin
+#endif
 
-#ifdef ESP32
-ESP32WebThingAdapter adapter("esp32");
-#endif
-#ifdef ESP8266
-ESP8266WebThingAdapter adapter("esp8266");
-#endif
+WebThingAdapter adapter("w25");
 
 ThingDevice led("led", "Built-in LED", "onOffSwitch");
 
@@ -37,7 +37,9 @@ void setup(void){
   Serial.print("Connecting to \"");
   Serial.print(ssid);
   Serial.println("\"");
+#if defined(ESP8266) || defined(ESP32)
   WiFi.mode(WIFI_STA);
+#endif
   WiFi.begin(ssid, password);
   Serial.println("");
 
