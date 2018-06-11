@@ -21,9 +21,9 @@
 #include <ESP8266mDNS.h>
 #include "Thing.h"
 
-class ESP8266WebThingAdapter {
+class WebThingAdapter {
 public:
-  ESP8266WebThingAdapter(String _name): name(_name), server(80) {
+  WebThingAdapter(String _name): name(_name), server(80) {
   }
 
   void begin() {
