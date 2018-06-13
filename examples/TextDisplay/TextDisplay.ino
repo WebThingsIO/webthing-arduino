@@ -50,12 +50,7 @@ const int textWidth = 6;
 const int width = 128;
 const int height = 64;
 
-#ifdef ESP32
-ESP32WebThingAdapter adapter("esp32");
-#endif
-#ifdef ESP8266
-ESP8266WebThingAdapter adapter("esp8266");
-#endif
+WebThingAdapter adapter("textdisplayer");
 
 ThingDevice textDisplay("textDisplay", "Text display", "textDisplay");
 ThingProperty text("text", "", STRING);

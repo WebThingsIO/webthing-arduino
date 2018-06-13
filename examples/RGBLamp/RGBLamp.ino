@@ -18,12 +18,7 @@ const char* password = "";
 /// Only used for monitoring, can be removed it's not part of our "thing"
 const int ledPin = LED_BUILTIN;
 
-#ifdef ESP32
-ESP32WebThingAdapter adapter("esp32");
-#endif
-#ifdef ESP8266
-ESP8266WebThingAdapter adapter("esp8266");
-#endif
+WebThingAdapter adapter("rgb-lamp");
 
 ThingDevice device("dimmable-color-light", "Dimmable Color Light", "dimmableColorLight");
 
