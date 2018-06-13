@@ -31,7 +31,9 @@ void setup(void){
   pinMode(lampPin, OUTPUT);
   digitalWrite(lampPin, HIGH);
   Serial.begin(115200);
+#if defined(ESP8266) || defined(ESP32)
   WiFi.mode(WIFI_STA);
+#endif
   WiFi.begin(ssid, password);
   Serial.println("");
 

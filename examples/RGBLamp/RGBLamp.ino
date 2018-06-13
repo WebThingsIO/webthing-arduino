@@ -57,7 +57,9 @@ void setup(void) {
   Serial.print("Connecting to \"");
   Serial.print(ssid);
   Serial.println("\"");
+#if defined(ESP8266) || defined(ESP32)
   WiFi.mode(WIFI_STA);
+#endif
   WiFi.begin(ssid, password);
   Serial.println("");
 
