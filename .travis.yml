@@ -34,4 +34,4 @@ install:
     - platformio update
 
 script:
-    - platformio ci --project-conf examples/PlatformIO/LED/platformio.ini
+    - platformio ci --project-conf examples/PlatformIO/TextDisplay/platformio.ini
