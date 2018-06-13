@@ -14,7 +14,11 @@
 const char* ssid = "......";
 const char* password = "..........";
 
+#if defined(LED_BUILTIN)
 const int lampPin = LED_BUILTIN;
+#else
+const int lampPin = 13;  // manully configure LED pin
+#endif
 
 WebThingAdapter adapter("led-lamp");
 

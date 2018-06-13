@@ -17,7 +17,11 @@ const char* ssid = "public";
 const char* password = "";
 
 /// Only used for monitoring, can be removed it's not part of our "thing"
+#if defined(LED_BUILTIN)
 const int ledPin = LED_BUILTIN;
+#else
+const int ledPin = 13;  // manully configure LED pin
+#endif
 
 WebThingAdapter adapter("rgb-lamp");
 
