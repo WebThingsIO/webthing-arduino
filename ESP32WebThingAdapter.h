@@ -14,7 +14,6 @@
 
 #ifdef ESP32
 
-#include <ESP8266WiFi.h> // TODO: maybe unnecessary?
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
@@ -24,9 +23,9 @@
 #define ESP32_MAX_PUT_BODY_SIZE 256
 
 
-class ESP32WebThingAdapter {
+class WebThingAdapter {
 public:
-  ESP32WebThingAdapter(String _name): name(_name), server(80) {
+  WebThingAdapter(String _name): name(_name), server(80) {
   }
 
   void begin() {
@@ -42,9 +41,9 @@ public:
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "PUT, GET, OPTIONS");
 
-    this->server.onNotFound(std::bind(&ESP32WebThingAdapter::handleUnknown, this, std::placeholders::_1));
+    this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this, std::placeholders::_1));
 
-    this->server.on("/", HTTP_GET, std::bind(&ESP32WebThingAdapter::handleThings, this, std::placeholders::_1));
+    this->server.on("/", HTTP_GET, std::bind(&WebThingAdapter::handleThings, this, std::placeholders::_1));
 
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
@@ -52,23 +51,27 @@ public:
       ThingProperty* property = device->firstProperty;
       while (property != nullptr) {
         String propertyBase = deviceBase + "/properties/" + property->id;
-        this->server.on(propertyBase.c_str(), HTTP_GET, std::bind(&ESP32WebThingAdapter::handleThingPropertyGet, this, std::placeholders::_1, property));
-        this->server.on(propertyBase.c_str(), HTTP_PUT, 
-          std::bind(&ESP32WebThingAdapter::handleThingPropertyPut, this, std::placeholders::_1, property),
+        this->server.on(propertyBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingPropertyGet, this, std::placeholders::_1, property));
+        this->server.on(propertyBase.c_str(), HTTP_PUT,
+          std::bind(&WebThingAdapter::handleThingPropertyPut, this, std::placeholders::_1, property),
           NULL,
-          std::bind(&ESP32WebThingAdapter::handleBody, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5)
+          std::bind(&WebThingAdapter::handleBody, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5)
         );
 
         property = property->next;
       }
 
-      this->server.on(deviceBase.c_str(), HTTP_GET, std::bind(&ESP32WebThingAdapter::handleThing, this, std::placeholders::_1, device));
+      this->server.on(deviceBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThing, this, std::placeholders::_1, device));
 
       device = device->next;
 
     }
 
     this->server.begin();
+  }
+
+  void update() {
+    // non implemented, async web-server
   }
 
   void addDevice(ThingDevice* device) {
@@ -216,7 +219,7 @@ private:
     b_has_body_data = false;
     memset(body_data,0,sizeof(body_data));
   }
-  
+
 };
 
 #endif    // ESP32
