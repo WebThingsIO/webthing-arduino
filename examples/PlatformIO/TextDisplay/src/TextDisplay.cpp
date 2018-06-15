@@ -87,7 +87,9 @@ void setup() {
   display.display();
   delay(2000);
 
+#if defined(ESP8266) || defined(ESP32)
   WiFi.mode(WIFI_STA);
+#endif
   WiFi.begin(ssid, password);
   Serial.println("");
 
