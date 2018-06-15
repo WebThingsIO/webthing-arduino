@@ -24,14 +24,14 @@ cache:
         - "~/.platformio"
 
 env:
-    - PLATFORMIO_CI_SRC=examples/LED
-    - PLATFORMIO_CI_SRC=examples/LEDLamp
-    - PLATFORMIO_CI_SRC=examples/RGBLamp
-    - PLATFORMIO_CI_SRC=examples/TextDisplay
+    - PLATFORMIO_PROJECT_DIR=examples/PlatformIO/BME280
+    - PLATFORMIO_PROJECT_DIR=examples/PlatformIO/LED
+    - PLATFORMIO_PROJECT_DIR=examples/PlatformIO/TextDisplay
 
 install:
-    - pip install -U platformio
+    - pip install platformio
+    - platformio upgrade --dev
     - platformio update
 
 script:
-    - platformio ci --project-conf examples/PlatformIO/TextDisplay/platformio.ini
+    - platformio run --project-dir $PLATFORMIO_PROJECT_DIR
