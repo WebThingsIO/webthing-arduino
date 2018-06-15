@@ -29,7 +29,8 @@ env:
     - PLATFORMIO_PROJECT_DIR=examples/PlatformIO/TextDisplay
 
 install:
-    - pip install -U platformio
+    - pip install platformio
+    - platformio upgrade --dev
     - platformio update
 
 script:
