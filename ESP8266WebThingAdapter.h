@@ -89,7 +89,7 @@ private:
   }
 
   void handleThings() {
-    StaticJsonBuffer<1024> buf;
+    StaticJsonBuffer<2048> buf;
     JsonArray& things = buf.createArray();
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
