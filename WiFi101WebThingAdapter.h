@@ -239,7 +239,7 @@ private:
     sendOk();
     sendHeaders();
 
-    StaticJsonBuffer<1024> buf;
+    StaticJsonBuffer<2048> buf;
     JsonArray& things = buf.createArray();
     ThingDevice* device = firstDevice;
     while (device != nullptr) {
