@@ -1,12 +1,12 @@
-webthing
-========
+webthing-arduino
+================
 
 A simple server for the ESP8266, the ESP32, or any WiFi101-compatible board
 that implements Mozilla's proposed Web of Things API. The [LED
-example](https://github.com/mozilla-iot/webthing-esp8266/blob/master/examples/LED)
+example](https://github.com/mozilla-iot/webthing-arduino/blob/master/examples/LED)
 exposes an onOffSwitch named "Built-in LED" which controls the board's built-in
 LED. The [LED Lamp
-example](https://github.com/mozilla-iot/webthing-esp8266/blob/master/examples/LEDLamp)
+example](https://github.com/mozilla-iot/webthing-arduino/blob/master/examples/LEDLamp)
 ups the ante by introducing a `level` property to expose a dimmableLight.
 
 ## Arduino
@@ -28,11 +28,11 @@ Install the WiFi101 library from the Arduino library manager.
 Make sure to install the ArduinoJson library if you don't have it
 installed already.
 
-![ArduinoJson install process](https://github.com/mozilla-iot/webthing-esp8266/raw/master/docs/arduinojson.png)
+![ArduinoJson install process](https://github.com/mozilla-iot/webthing-arduino/raw/master/docs/arduinojson.png)
 
 Next, download this library from the same library manager by searching for `webthing`.
 
-![add zip library and LED example](https://github.com/mozilla-iot/webthing-esp8266/raw/master/docs/add-library-open-example.png)
+![add zip library and LED example](https://github.com/mozilla-iot/webthing-arduino/raw/master/docs/add-library-open-example.png)
 
 You should be able to upload the example sketch onto your board and use it as a
 simple Web Thing. This Web Thing can be talked to using the WoT API or added to
@@ -46,7 +46,7 @@ your board using our proposed API.
 
 ## PlatformIO
 
-Add the `webthing-esp8266` library through PlatformIO's package management
+Add the `webthing-arduino` library through PlatformIO's package management
 interface. You may also need to manually add the ArduinoJson and other
 libraries to your project.
 
