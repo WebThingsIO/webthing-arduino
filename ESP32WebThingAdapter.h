@@ -141,7 +141,9 @@ private:
         prop["type"] = "string";
         break;
       }
-      prop["@type"] = property->atType;
+      if (property->atType != nullptr) {
+        prop["@type"] = property->atType;
+      }
       prop["href"] = "/things/" + device->id + "/properties/" + property->id;
       property = property->next;
     }
