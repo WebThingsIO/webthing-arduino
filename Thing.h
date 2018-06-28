@@ -29,12 +29,14 @@ public:
   String id;
   String description;
   ThingPropertyType type;
+  String atType;
   ThingProperty* next = nullptr;
 
-  ThingProperty(const char* id_, const char* description_, ThingPropertyType type_):
+  ThingProperty(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_):
     id(id_),
     description(description_),
-    type(type_) {
+    type(type_),
+    atType(atType_) {
   }
 
   void setValue(ThingPropertyValue newValue) {
@@ -53,12 +55,12 @@ class ThingDevice {
 public:
   String id;
   String name;
-  String type;
+  const char** type;
   ThingDevice* next = nullptr;
   ThingProperty* firstProperty = nullptr;
   ThingProperty* lastProperty = nullptr;
 
-  ThingDevice(const char* _id, const char* _name, const char* _type):
+  ThingDevice(const char* _id, const char* _name, const char** _type):
     id(_id),
     name(_name),
     type(_type) {

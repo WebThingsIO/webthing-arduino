@@ -115,8 +115,16 @@ private:
 
   void serializeDevice(JsonObject& descr, ThingDevice* device) {
     descr["name"] = device->name;
-    descr["type"] = device->type;
     descr["href"] = "/things/" + device->id;
+    descr["@context"] = "https://iot.mozilla.org/schemas";
+
+    JsonArray& typeJson = descr.createNestedArray("@type");
+    const char** type = device->type;
+    while ((*type) != nullptr) {
+      typeJson.add(*type);
+      type++;
+    }
+
     JsonObject& props = descr.createNestedObject("properties");
 
     ThingProperty* property = device->firstProperty;
@@ -133,6 +141,7 @@ private:
         prop["type"] = "string";
         break;
       }
+      prop["@type"] = property->atType;
       prop["href"] = "/things/" + device->id + "/properties/" + property->id;
       property = property->next;
     }
