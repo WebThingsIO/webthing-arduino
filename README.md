@@ -53,43 +53,65 @@ libraries to your project.
 ## Example
 
 ```c++
+#include <Arduino.h>
 #include <Thing.h>
 #include <WebThingAdapter.h>
 
-WebThingAdapter adapter("localtoast");
+const char* ssid = "......";
+const char* password = "..........";
 
-ThingDevice toaster("toaster-1", "My Toaster", "toaster");
+#if defined(LED_BUILTIN)
+const int lampPin = LED_BUILTIN;
+#else
+const int lampPin = 13;  // manully configure LED pin
+#endif
 
-ThingProperty toasterOn("on", "Toasting", BOOLEAN);
-ThingProperty toasterTimer("timer", "Time left in toast", NUMBER);
-ThingProperty toasterToast("toast", "Toast requested", BOOLEAN);
+WebThingAdapter adapter("led-lamp");
 
-ToasterInterface toasterInterface;
+const char* lampTypes[] = {"OnOffSwitch", "Light", nullptr};
+ThingDevice lamp("lamp", "My Lamp", lampTypes);
 
-void setup() {
-  toaster.addProperty(&toasterOn);
-  toaster.addProperty(&toasterTimer);
-  toaster.addProperty(&toasterToast);
+ThingProperty lampOn("on", "Whether the lamp is turned on", BOOLEAN, "OnOffProperty");
+ThingProperty lampLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
 
-  adapter.addDevice(&toaster);
+void setup(void){
+  pinMode(lampPin, OUTPUT);
+  digitalWrite(lampPin, HIGH);
+  Serial.begin(115200);
+#if defined(ESP8266) || defined(ESP32)
+  WiFi.mode(WIFI_STA);
+#endif
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  lamp.addProperty(&lampOn);
+  lamp.addProperty(&lampLevel);
+  adapter.addDevice(&lamp);
+  adapter.begin();
+  Serial.println("HTTP server started");
+
+  analogWriteRange(255);
 }
 
-void loop() {
+void loop(void){
   adapter.update();
-
-  ThingPropertyValue onValue;
-  onValue.boolean = toasterInterface.isToasting();
-  toasterOn.setValue(onValue);
-
-  ThingPropertyValue timerValue;
-  timerValue.number = toasterInterface.getSecondsLeft();
-  toasterTimer.setValue(timerValue);
-
-  if (toasterToast.getValue().boolean) {
-    ThingPropertyValue toastValue;
-    toastValue.boolean = false;
-    toasterToast.setValue(toastValue);
-    toasterInterface.startToasting();
+  if (lampOn.getValue().boolean) {
+    int level = map(lampLevel.getValue().number, 0, 100, 255, 0);
+    analogWrite(lampPin, level);
+  } else {
+    analogWrite(lampPin, 255);
   }
 }
 ```
