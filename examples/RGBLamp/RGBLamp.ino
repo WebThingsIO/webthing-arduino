@@ -25,11 +25,12 @@ const int ledPin = 13;  // manully configure LED pin
 
 WebThingAdapter adapter("rgb-lamp");
 
-ThingDevice device("dimmable-color-light", "Dimmable Color Light", "dimmableColorLight");
+const char* deviceTypes = {"Light", "OnOffSwitch", "ColorControl", nullptr};
+ThingDevice device("dimmable-color-light", "Dimmable Color Light", deviceTypes);
 
-ThingProperty deviceOn("on", "Whether the led is turned on", BOOLEAN);
-ThingProperty deviceLevel("level", "The level of light from 0-100", NUMBER);
-ThingProperty deviceColor("color", "The color of light in RGB", STRING);
+ThingProperty deviceOn("on", "Whether the led is turned on", BOOLEAN, "OnOffProperty");
+ThingProperty deviceLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
+ThingProperty deviceColor("color", "The color of light in RGB", STRING, "ColorProperty");
 
 bool lastOn = false;
 String lastColor = "#ffffff";

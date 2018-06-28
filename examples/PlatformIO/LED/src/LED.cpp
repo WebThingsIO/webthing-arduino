@@ -23,9 +23,9 @@ const int ledPin = 13;  // manully configure LED pin
 
 WebThingAdapter adapter("w25");
 
-ThingDevice led("led", "Built-in LED", "onOffSwitch");
-
-ThingProperty ledOn("on", "", BOOLEAN);
+const char* ledTypes[] = {"OnOffSwitch", "Light", nullptr};
+ThingDevice led("led", "Built-in LED", ledTypes);
+ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty");
 
 bool lastOn = false;
 

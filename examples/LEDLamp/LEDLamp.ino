@@ -22,10 +22,11 @@ const int lampPin = 13;  // manully configure LED pin
 
 WebThingAdapter adapter("led-lamp");
 
-ThingDevice lamp("lamp", "My Lamp", "dimmableLight");
+const char* lampTypes[] = {"OnOffSwitch", "Light", nullptr};
+ThingDevice lamp("lamp", "My Lamp", lampTypes);
 
-ThingProperty lampOn("on", "Whether the lamp is turned on", BOOLEAN);
-ThingProperty lampLevel("level", "The level of light from 0-100", NUMBER);
+ThingProperty lampOn("on", "Whether the lamp is turned on", BOOLEAN, "OnOffProperty");
+ThingProperty lampLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
 
 void setup(void){
   pinMode(lampPin, OUTPUT);
