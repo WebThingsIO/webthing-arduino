@@ -45,10 +45,11 @@
 
 WebThingAdapter adapter("weathersensor");
 
-ThingDevice weather("bme280", "BME280 Weather Sensor", "thing");
-ThingProperty weatherTemp("temperature", "", NUMBER);
-ThingProperty weatherHum("humidity", "", NUMBER);
-ThingProperty weatherPres("pressure", "", NUMBER);
+const char* bme280Types[] = {nullptr};
+ThingDevice weather("bme280", "BME280 Weather Sensor", "thing", bme280Types);
+ThingProperty weatherTemp("temperature", "", NUMBER, nullptr);
+ThingProperty weatherHum("humidity", "", NUMBER, nullptr);
+ThingProperty weatherPres("pressure", "", NUMBER, nullptr);
 
 BME280I2C::Settings settings(
    BME280::OSR_X1,
