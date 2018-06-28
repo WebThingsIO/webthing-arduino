@@ -53,8 +53,8 @@ const int height = 64;
 
 WebThingAdapter adapter("textdisplayer");
 
-const char* textDisplayTypes = {nullptr};
-ThingDevice textDisplay("textDisplay", "Text display", "textDisplay", textDisplayTypes);
+const char* textDisplayTypes[] = {"TextDisplay", nullptr};
+ThingDevice textDisplay("textDisplay", "Text display", textDisplayTypes);
 ThingProperty text("text", "", STRING, nullptr);
 
 String lastText = "moz://a iot";

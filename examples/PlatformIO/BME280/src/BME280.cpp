@@ -46,7 +46,7 @@
 WebThingAdapter adapter("weathersensor");
 
 const char* bme280Types[] = {nullptr};
-ThingDevice weather("bme280", "BME280 Weather Sensor", "thing", bme280Types);
+ThingDevice weather("bme280", "BME280 Weather Sensor", bme280Types);
 ThingProperty weatherTemp("temperature", "", NUMBER, nullptr);
 ThingProperty weatherHum("humidity", "", NUMBER, nullptr);
 ThingProperty weatherPres("pressure", "", NUMBER, nullptr);
