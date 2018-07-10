@@ -40,18 +40,15 @@ enum ReadState {
 class WebThingAdapter {
 public:
   WebThingAdapter(String _name): name(_name), server(80), mdns(udp) {
-    // String url = "url=http://" + name + ".local";
-    serviceTxt = "\x13webthing=true"; // _" + url;
-    // serviceTxt[14] = (char)url.length();
   }
 
   void begin() {
     mdns.begin(WiFi.localIP(), name.c_str());
 
-    mdns.addServiceRecord("_http",
+    mdns.addServiceRecord("_webthing",
                           80,
-                          MDNSServiceTCP);
-                          // serviceTxt.c_str());
+                          MDNSServiceTCP,
+                          "\x06path=/");
 
     server.begin();
   }
@@ -156,7 +153,7 @@ public:
     }
   }
 private:
-  String name, serviceTxt;
+  String name;
   WiFiServer server;
   WiFiClient client;
   WiFiUDP udp;

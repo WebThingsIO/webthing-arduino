@@ -33,10 +33,8 @@ public:
       Serial.println("MDNS responder started");
     }
 
-    MDNS.addService("http", "tcp", 80);
-    MDNS.addServiceTxt("http", "tcp", "url",
-        "http://" + this->name + ".local");
-    MDNS.addServiceTxt("http", "tcp", "webthing", "true");
+    MDNS.addService("webthing", "tcp", 80);
+    MDNS.addServiceTxt("webthing", "tcp", "path", "/");
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "PUT, GET, OPTIONS");
