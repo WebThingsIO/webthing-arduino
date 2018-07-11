@@ -21,7 +21,7 @@ const int ledPin = LED_BUILTIN;
 const int ledPin = 13;  // manully configure LED pin
 #endif
 
-WebThingAdapter adapter("w25");
+WebThingAdapter* adapter;
 
 const char* ledTypes[] = {"OnOffSwitch", "Light", nullptr};
 ThingDevice led("led", "Built-in LED", ledTypes);
@@ -58,10 +58,11 @@ void setup(void){
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  adapter = new WebThingAdapter("w25", WiFi.localIP());
 
   led.addProperty(&ledOn);
-  adapter.addDevice(&led);
-  adapter.begin();
+  adapter->addDevice(&led);
+  adapter->begin();
   Serial.println("HTTP server started");
   Serial.print("http://");
   Serial.print(WiFi.localIP());
@@ -70,7 +71,7 @@ void setup(void){
 }
 
 void loop(void){
-  adapter.update();
+  adapter->update();
   bool on = ledOn.getValue().boolean;
   digitalWrite(ledPin, on ? LOW : HIGH); // active low led
   if (on != lastOn) {

@@ -51,7 +51,7 @@ const int textWidth = 6;
 const int width = 128;
 const int height = 64;
 
-WebThingAdapter adapter("textdisplayer");
+WebThingAdapter* adapter;
 
 const char* textDisplayTypes[] = {"TextDisplay", nullptr};
 ThingDevice textDisplay("textDisplay", "Text display", textDisplayTypes);
@@ -105,6 +105,7 @@ void setup() {
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  adapter = new WebThingAdapter("textdisplayer", WiFi.localIP());
 
   displayString(lastText);
 
@@ -113,12 +114,12 @@ void setup() {
   text.setValue(value);
 
   textDisplay.addProperty(&text);
-  adapter.addDevice(&textDisplay);
-  adapter.begin();
+  adapter->addDevice(&textDisplay);
+  adapter->begin();
 }
 
 void loop() {
-  adapter.update();
+  adapter->update();
   displayString(lastText);
 }
 

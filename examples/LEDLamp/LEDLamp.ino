@@ -20,7 +20,7 @@ const int lampPin = LED_BUILTIN;
 const int lampPin = 13;  // manully configure LED pin
 #endif
 
-WebThingAdapter adapter("led-lamp");
+WebThingAdapter* adapter;
 
 const char* lampTypes[] = {"OnOffSwitch", "Light", nullptr};
 ThingDevice lamp("lamp", "My Lamp", lampTypes);
@@ -49,18 +49,21 @@ void setup(void){
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  adapter = new WebThingAdapter("led-lamp", WiFi.localIP());
 
   lamp.addProperty(&lampOn);
   lamp.addProperty(&lampLevel);
-  adapter.addDevice(&lamp);
-  adapter.begin();
+  adapter->addDevice(&lamp);
+  adapter->begin();
   Serial.println("HTTP server started");
 
+#ifdef analogWriteRange
   analogWriteRange(255);
+#endif
 }
 
 void loop(void){
-  adapter.update();
+  adapter->update();
   if (lampOn.getValue().boolean) {
     int level = map(lampLevel.getValue().number, 0, 100, 255, 0);
     analogWrite(lampPin, level);
