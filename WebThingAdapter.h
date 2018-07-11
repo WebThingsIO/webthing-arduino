@@ -11,8 +11,7 @@
 #ifndef MOZILLA_IOT_WEBTHINGADAPTER_H
 #define MOZILLA_IOT_WEBTHINGADAPTER_H
 
-#include "ESP8266WebThingAdapter.h"
-#include "ESP32WebThingAdapter.h"
+#include "ESPWebThingAdapter.h"
 #include "WiFi101WebThingAdapter.h"
 
 #endif
