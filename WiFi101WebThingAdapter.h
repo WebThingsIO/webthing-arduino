@@ -33,13 +33,23 @@ enum ReadState {
   STATE_READ_METHOD,
   STATE_READ_URI,
   STATE_DISCARD_HTTP11,
-  STATE_DISCARD_HEADERS,
+  STATE_DISCARD_HEADERS_PRE_HOST,
+  STATE_READ_HOST,
+  STATE_DISCARD_HEADERS_POST_HOST,
   STATE_READ_CONTENT
 };
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name): name(_name), server(80), mdns(udp) {
+  WebThingAdapter(String _name, uint32_t _ip): name(_name), server(80), mdns(udp) {
+    ip = "";
+    for (int i = 0; i < 4; i++) {
+      ip += _ip & 0xff;
+      if (i < 3) {
+        ip += '.';
+      }
+      _ip >>= 8;
+    }
   }
 
   void begin() {
@@ -121,12 +131,42 @@ public:
         break;
 
       case STATE_DISCARD_HTTP11:
-        if (c == ' ') {
-          state = STATE_DISCARD_HEADERS;
+        if (c == '\r') {
+          state = STATE_DISCARD_HEADERS_PRE_HOST;
         }
         break;
 
-      case STATE_DISCARD_HEADERS:
+      case STATE_DISCARD_HEADERS_PRE_HOST:
+        if (c == '\r') {
+          break;
+        }
+        if (c == '\n') {
+          headerRaw = "";
+          break;
+        }
+        if (c == ':') {
+          if (headerRaw.equalsIgnoreCase("Host")) {
+            state = STATE_READ_HOST;
+          }
+          break;
+        }
+
+        headerRaw += c;
+        break;
+
+      case STATE_READ_HOST:
+        if (c == '\r') {
+          returnsAndNewlines = 1;
+          state = STATE_DISCARD_HEADERS_POST_HOST;
+          break;
+        }
+        if (c == ' ') {
+          break;
+        }
+        host += c;
+        break;
+
+      case STATE_DISCARD_HEADERS_POST_HOST:
         if (c == '\r' || c == '\n') {
           returnsAndNewlines += 1;
         } else {
@@ -153,7 +193,7 @@ public:
     }
   }
 private:
-  String name;
+  String name, ip;
   WiFiServer server;
   WiFiClient client;
   WiFiUDP udp;
@@ -164,10 +204,26 @@ private:
   HTTPMethod method = HTTP_ANY;
   String content = "";
   String methodRaw = "";
+  String host = "";
+  String headerRaw = "";
   int returnsAndNewlines = 0;
   int retries = 0;
 
   ThingDevice *firstDevice = nullptr, *lastDevice = nullptr;
+
+  bool verifyHost() {
+    int colonIndex = host.indexOf(':');
+    if (colonIndex >= 0) {
+      host.remove(colonIndex);
+    }
+    if (host == name + ".local") {
+      return true;
+    }
+    if (host == ip) {
+      return true;
+    }
+    return false;
+  }
 
   void handleRequest() {
     if (DEBUG) {
@@ -176,8 +232,19 @@ private:
       Serial.println(method);
       Serial.print("uri: ");
       Serial.println(uri);
+      Serial.print("host: ");
+      Serial.println(host);
       Serial.print("content: ");
       Serial.println(content);
+    }
+
+    if (!verifyHost()) {
+      client.println("HTTP/1.1 403 Forbidden");
+      client.println("Connection: close");
+      client.println();
+      delay(1);
+      client.stop();
+      return;
     }
 
     if (uri == "/") {
@@ -327,6 +394,8 @@ private:
     state = STATE_READ_METHOD;
     method = HTTP_ANY;
     methodRaw = "";
+    headerRaw = "";
+    host = "";
     uri = "";
     content = "";
     retries = 0;
