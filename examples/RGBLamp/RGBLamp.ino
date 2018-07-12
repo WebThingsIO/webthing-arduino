@@ -23,7 +23,7 @@ const int ledPin = LED_BUILTIN;
 const int ledPin = 13;  // manully configure LED pin
 #endif
 
-WebThingAdapter adapter("rgb-lamp");
+WebThingAdapter* adapter;
 
 const char* deviceTypes = {"Light", "OnOffSwitch", "ColorControl", nullptr};
 ThingDevice device("dimmable-color-light", "Dimmable Color Light", deviceTypes);
@@ -79,6 +79,7 @@ void setup(void) {
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  adapter = new WebThingAdapter("rgb-lamp", WiFi.localIP());
 
   device.addProperty(&deviceOn);
   ThingPropertyValue levelValue;
@@ -91,9 +92,9 @@ void setup(void) {
   deviceColor.setValue(colorValue);
   device.addProperty(&deviceColor);
 
-  adapter.addDevice(&device);
+  adapter->addDevice(&device);
   Serial.println("Starting HTTP server");
-  adapter.begin();
+  adapter->begin();
   Serial.print("http://");
   Serial.print(WiFi.localIP());
   Serial.print("/things/");
@@ -120,7 +121,7 @@ void update(String* color, int const level) {
 void loop(void) {
   digitalWrite(ledPin, micros() % 0xFFFF ? HIGH : LOW); // Heartbeat
 
-  adapter.update();
+  adapter->update();
 
   bool on = deviceOn.getValue().boolean;
   int level = deviceLevel.getValue().number;

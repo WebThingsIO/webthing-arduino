@@ -1,31 +1,34 @@
 /**
- * ESP32WebThingAdapter.h
+ * ESPWebThingAdapter.h
  *
  * Exposes the Web Thing API based on provided ThingDevices.
- * Suitable for ESP32, ESPAsyncWebServer, ESPAsyncTCP
+ * Suitable for ESP32 and ESP8266 using ESPAsyncWebServer and ESPAsyncTCP
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#ifndef MOZILLA_IOT_ESP32WEBTHINGADAPTER_H
-#define MOZILLA_IOT_ESP32WEBTHINGADAPTER_H
+#ifndef MOZILLA_IOT_ESPWEBTHINGADAPTER_H
+#define MOZILLA_IOT_ESPWEBTHINGADAPTER_H
 
-#ifdef ESP32
+#if defined(ESP32) || defined(ESP8266)
 
-#include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
+#ifdef ESP8266
+#include <ESP8266mDNS.h>
+#else
 #include <ESPmDNS.h>
+#endif
 #include "Thing.h"
 
-#define ESP32_MAX_PUT_BODY_SIZE 256
+#define ESP_MAX_PUT_BODY_SIZE 512
 
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name): name(_name), server(80) {
+  WebThingAdapter(String _name, IPAddress _ip): name(_name), server(80), ip(_ip.toString()) {
   }
 
   void begin() {
@@ -85,19 +88,44 @@ public:
 private:
   AsyncWebServer server;
   String name;
+  String ip;
   ThingDevice* firstDevice = nullptr;
   ThingDevice* lastDevice = nullptr;
-  char body_data[ESP32_MAX_PUT_BODY_SIZE];
+  char body_data[ESP_MAX_PUT_BODY_SIZE];
   bool b_has_body_data = false;
 
+  bool verifyHost(AsyncWebServerRequest *request) {
+    AsyncWebHeader* header = request->getHeader("Host");
+    if (header == nullptr) {
+      request->send(403);
+      return false;
+    }
+    String value = header->value();
+    int colonIndex = value.indexOf(':');
+    if (colonIndex >= 0) {
+      value.remove(colonIndex);
+    }
+    if (value == name + ".local" || value == ip) {
+      return true;
+    }
+    request->send(403);
+    return false;
+  }
+
   void handleUnknown(AsyncWebServerRequest *request) {
+    if (!verifyHost(request)) {
+      return;
+    }
     request->send(404);
   }
 
   void handleThings(AsyncWebServerRequest *request) {
+    if (!verifyHost(request)) {
+      return;
+    }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    StaticJsonBuffer<2048> buf;
+    StaticJsonBuffer<4096> buf;
     JsonArray& things = buf.createArray();
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
@@ -148,6 +176,9 @@ private:
   }
 
   void handleThing(AsyncWebServerRequest *request, ThingDevice*& device) {
+    if (!verifyHost(request)) {
+      return;
+    }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
     StaticJsonBuffer<1024> buf;
@@ -159,6 +190,9 @@ private:
   }
 
   void handleThingPropertyGet(AsyncWebServerRequest *request, ThingProperty* property) {
+    if (!verifyHost(request)) {
+      return;
+    }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
     StaticJsonBuffer<256> buf;
@@ -181,7 +215,7 @@ private:
 
 
   void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if ( total >= ESP32_MAX_PUT_BODY_SIZE || index+len >= ESP32_MAX_PUT_BODY_SIZE) {
+    if ( total >= ESP_MAX_PUT_BODY_SIZE || index+len >= ESP_MAX_PUT_BODY_SIZE) {
         return; // cannot store this size..
     }
     // copy to internal buffer
@@ -190,6 +224,9 @@ private:
   }
 
   void handleThingPropertyPut(AsyncWebServerRequest *request, ThingProperty* property) {
+    if (!verifyHost(request)) {
+      return;
+    }
     if (!b_has_body_data) {
       request->send(422); // unprocessable entity (b/c no body)
       return;
@@ -231,6 +268,6 @@ private:
 
 };
 
-#endif    // ESP32
+#endif    // ESP
 
 #endif

@@ -43,7 +43,7 @@
 #define PIN_STATE_LOW LOW
 #endif
 
-WebThingAdapter adapter("weathersensor");
+WebThingAdapter* adapter;
 
 const char* bme280Types[] = {nullptr};
 ThingDevice weather("bme280", "BME280 Weather Sensor", bme280Types);
@@ -120,15 +120,16 @@ void setup() {
 
   // connected, make the LED stay on
   digitalWrite(LED_BUILTIN, PIN_STATE_HIGH);
+  adapter = new WebThingAdapter("weathersensor", WiFi.localIP());
 
   weather.addProperty(&weatherTemp);
   weather.addProperty(&weatherPres);
   weather.addProperty(&weatherHum);
-  adapter.addDevice(&weather);
-  adapter.begin();
+  adapter->addDevice(&weather);
+  adapter->begin();
 }
 
 void loop() {
   readBME280Data();
-  adapter.update();
+  adapter->update();
 }
