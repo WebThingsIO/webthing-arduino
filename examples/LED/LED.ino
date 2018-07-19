@@ -1,6 +1,8 @@
 /**
- * Simple ESP8266 server compliant with Mozilla's proposed WoT API
- * Based on the HelloServer example
+ * Simple server compliant with Mozilla's proposed WoT API
+ * Originally based on the HelloServer example
+ * Tested on ESP8266, ESP32, Arduino boards with WINC1500 modules (shields or
+ * MKR1000)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
