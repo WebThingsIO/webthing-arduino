@@ -9,10 +9,9 @@
 default: all
 	@echo "# $@: $^"
 
-all: rule/setup
-
 top_reldir?=../..
 topdir?=${CURDIR}/${top_reldir}
+
 -include ${topdir}/Makefile
 
 AVR_TOOLS_DIR?=${ARDUINO_DIR}/hardware/tools/avr
@@ -26,7 +25,10 @@ BOARD_TAG=mega2560
 BOARD_SUB=
 MCU?=at${BOARD_TAG}
 F_CPU?=16000000L
-MONITOR_PORT?=$(shell ls /dev/ttyUSB* /dev/ttyACM* | head -n1)
+MONITOR_PORT?=$(shell ls /dev/ttyUSB* 2> /dev/null \
+	|| ls /dev/ttyACM* 2> /dev/null \
+	|| echo "/dev/TODO/setup/monitor" \
+	| sort | head -n1)
 #}
 
 ARCHITECTURE=avr
@@ -41,3 +43,9 @@ ARDUINO_LIBS += ArduinoMDNS
 ARDUINO_LIBS += ArduinoJson
 
 -include ${arduino_mk}
+
+rule/setup:
+	@echo "Please setup your env to use ${arduino_mk}"
+
+%: rule/setup
+	@echo "Please run \"make $@\" again"
