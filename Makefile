@@ -6,7 +6,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/
 #}
 
-default: help
+default: rule/help
 
 topdir?=${CURDIR}
 extra_dir?=${topdir}/tmp
@@ -20,10 +20,10 @@ arduino_mk_url?=https://github.com/sudar/Arduino-Makefile
 ARDMK_DIR?=${extra_dir}/arduino-mk
 
 
-help:
+rule/help:
 	@echo "# Usage:"
-	@echo "# make setup # Will install tools and deps"
-	@echo "# make all # Will build all examples"
+	@echo "# make rule/setup # Will install tools and deps"
+	@echo "# make rule/all # Will build all examples"
 
 ${ARDUINO_DIR}:
 	mkdir -p ${@D}
@@ -60,10 +60,10 @@ rule/arduino_lib_dirs: ${ArduinoMDNS_dir} ${ArduinoJson_dir}
 	ls $^
 #}
 
-setup: rule/arduino_dir rule/arduino_mk_dir rule/arduino_lib_dirs
+rule/setup: rule/arduino_dir rule/arduino_mk_dir rule/arduino_lib_dirs
 	sync
 
-all: $(wildcard examples/*/Makefile | sort)
+rule/all: $(wildcard examples/*/Makefile | sort)
 	for file in $^; do \
  dirname=$$(dirname -- "$${file}") ; ${MAKE} -C $${dirname}; \
  done
