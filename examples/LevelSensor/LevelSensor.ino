@@ -59,7 +59,7 @@ void setup(void) {
 void loop(void) {
   const int threshold = 1;
   int value = analogRead(sensorPin);
-  double percent = (double) 100. - (value/1204.*100.);
+  double percent = (double) 100. - (value/1024.*100.);
   if (abs(percent - lastValue) >= threshold) {
     Serial.print("log: Value: ");
     Serial.print(value);
