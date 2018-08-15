@@ -20,7 +20,7 @@ const char* password = "";
 #if defined(LED_BUILTIN)
 const int ledPin = LED_BUILTIN;
 #else
-const int ledPin = 13;  // manully configure LED pin
+const int ledPin = 13;  // manually configure LED pin
 #endif
 
 WebThingAdapter* adapter;

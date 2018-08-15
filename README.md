@@ -18,6 +18,9 @@ development. These Adafruit guides explain [how to set up for an
 ESP8266](https://learn.adafruit.com/adafruit-feather-huzzah-esp8266/using-arduino-ide)
 and [how to set up for an
 ESP32](https://learn.adafruit.com/adafruit-huzzah32-esp32-feather/using-with-arduino-ide).
+You will also need to download the [ESP Async
+WebServer](https://github.com/me-no-dev/ESPAsyncWebServer/) library and unpack
+it in your sketchbook's libraries folder.
 
 ### WiFi101
 
@@ -25,8 +28,9 @@ Install the WiFi101 library from the Arduino library manager.
 
 ### Continuing onwards
 
-Make sure to install the ArduinoJson library if you don't have it
-installed already.
+Make sure to install the ArduinoJson library if you don't have it installed
+already. Note that you must select ArduinoJson version 5, not the prerelease
+beta version 6.
 
 ![ArduinoJson install process](https://github.com/mozilla-iot/webthing-arduino/raw/master/docs/arduinojson.png)
 
@@ -54,30 +58,34 @@ libraries to your project.
 
 ```c++
 #include <Arduino.h>
-#include <Thing.h>
-#include <WebThingAdapter.h>
+#include "Thing.h"
+#include "WebThingAdapter.h"
 
-const char* ssid = "......";
-const char* password = "..........";
+const char* ssid = "public";
+const char* password = "";
 
 #if defined(LED_BUILTIN)
-const int lampPin = LED_BUILTIN;
+const int ledPin = LED_BUILTIN;
 #else
-const int lampPin = 13;  // manully configure LED pin
+const int ledPin = 13;  // manually configure LED pin
 #endif
 
-WebThingAdapter adapter("led-lamp");
+WebThingAdapter* adapter;
 
-const char* lampTypes[] = {"OnOffSwitch", "Light", nullptr};
-ThingDevice lamp("lamp", "My Lamp", lampTypes);
+const char* ledTypes[] = {"OnOffSwitch", "Light", nullptr};
+ThingDevice led("led", "Built-in LED", ledTypes);
+ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty");
 
-ThingProperty lampOn("on", "Whether the lamp is turned on", BOOLEAN, "OnOffProperty");
-ThingProperty lampLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
+bool lastOn = false;
 
 void setup(void){
-  pinMode(lampPin, OUTPUT);
-  digitalWrite(lampPin, HIGH);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, HIGH);
   Serial.begin(115200);
+  Serial.println("");
+  Serial.print("Connecting to \"");
+  Serial.print(ssid);
+  Serial.println("\"");
 #if defined(ESP8266) || defined(ESP32)
   WiFi.mode(WIFI_STA);
 #endif
@@ -85,33 +93,41 @@ void setup(void){
   Serial.println("");
 
   // Wait for connection
+  bool blink = true;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    digitalWrite(ledPin, blink ? LOW : HIGH); // active low led
+    blink = !blink;
   }
+  digitalWrite(ledPin, HIGH); // active low led
 
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  adapter = new WebThingAdapter("w25", WiFi.localIP());
 
-  lamp.addProperty(&lampOn);
-  lamp.addProperty(&lampLevel);
-  adapter.addDevice(&lamp);
-  adapter.begin();
+  led.addProperty(&ledOn);
+  adapter->addDevice(&led);
+  adapter->begin();
   Serial.println("HTTP server started");
-
-  analogWriteRange(255);
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.print("/things/");
+  Serial.println(led.id);
 }
 
 void loop(void){
-  adapter.update();
-  if (lampOn.getValue().boolean) {
-    int level = map(lampLevel.getValue().number, 0, 100, 255, 0);
-    analogWrite(lampPin, level);
-  } else {
-    analogWrite(lampPin, 255);
+  adapter->update();
+  bool on = ledOn.getValue().boolean;
+  digitalWrite(ledPin, on ? LOW : HIGH); // active low led
+  if (on != lastOn) {
+    Serial.print(led.id);
+    Serial.print(": ");
+    Serial.println(on);
   }
+  lastOn = on;
 }
 ```
