@@ -13,7 +13,7 @@
 #include <EthernetWebThingAdapter.h>
 
 const char* deviceTypes[] = {"MultiLevelSensor", "Sensor", nullptr};
-ThingDevice device("AnalogSensorDevice", "Analog Sensor pluged in single pin", deviceTypes);
+ThingDevice device("AnalogSensorDevice", "Analog Sensor plugged in single pin", deviceTypes);
 ThingProperty property("level", "Analog Input pin", NUMBER, "LevelProperty");
 WebThingAdapter* adapter = NULL;
 

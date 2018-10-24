@@ -34,7 +34,7 @@ curl http://192.168.1.225/
         "Sensor"
       ],
     "href" : "/things/AnalogSensorDevice",
-    "name" : "Analog Sensor pluged in single pin",
+    "name" : "Analog Sensor plugged in single pin",
     "properties" : { "level" : { 
             "@type" : "LevelProperty",
             "href" : "/things/AnalogSensorDevice/properties/level",
@@ -50,7 +50,7 @@ curl http://192.168.1.225/things/AnalogSensorDevice/properties/level
 Then it can be added to gateway.
 
 Note, you may need to change the hardcoded MAC address,
-if you run this example on several devices of your LAN/
+if you run this example on several devices of your LAN.
 
 
 ## DEMO: ##
