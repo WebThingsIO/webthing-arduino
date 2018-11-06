@@ -125,7 +125,7 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    StaticJsonBuffer<4096> buf;
+    DynamicJsonBuffer buf(4096);
     JsonArray& things = buf.createArray();
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
@@ -181,7 +181,7 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    StaticJsonBuffer<1024> buf;
+    DynamicJsonBuffer buf(1024);
     JsonObject& descr = buf.createObject();
     this->serializeDevice(descr, device);
 
@@ -195,7 +195,7 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    StaticJsonBuffer<256> buf;
+    DynamicJsonBuffer buf(256);
     JsonObject& prop = buf.createObject();
     switch (property->type) {
     case BOOLEAN:
@@ -232,7 +232,7 @@ private:
       return;
     }
 
-    StaticJsonBuffer<256> newBuffer;
+    DynamicJsonBuffer newBuffer(256);
     JsonObject& newProp = newBuffer.parseObject(body_data);
     if (newProp.success()) {
       JsonVariant newValue = newProp[property->id];
