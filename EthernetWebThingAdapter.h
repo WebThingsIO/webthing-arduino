@@ -15,14 +15,26 @@
 #if !defined(ESP32) && !defined(ESP8266)
 
 #include <Arduino.h>
+
+#if defined(STM32F7xx)
+#include <LwIP.h>
+#include <STM32Ethernet.h>
+#else
 #include <Ethernet.h>
 #include <EthernetClient.h>
 #include <EthernetServer.h>
 #include <EthernetUdp.h>
 #include <Dhcp.h>
 #include <Dns.h>
+#define CONFIG_MDNS 1
+#endif
 
+#ifdef CONFIG_MDNS
 #include <ArduinoMDNS.h>
+EthernetUDP udp;
+MDNS mdns(udp);
+#endif
+
 #include <ArduinoJson.h>
 
 #include "Thing.h"
@@ -48,7 +60,11 @@ enum ReadState {
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, uint32_t _ip): name(_name), server(80), mdns(udp) {
+  WebThingAdapter(String _name, uint32_t _ip): name(_name), server(80)
+#ifdef CONFIG_MDNS
+  , mdns(udp)
+#endif
+{
     ip = "";
     for (int i = 0; i < 4; i++) {
       ip += _ip & 0xff;
@@ -60,19 +76,21 @@ public:
   }
 
   void begin() {
+#ifdef CONFIG_MDNS
     mdns.begin(Ethernet.localIP(), name.c_str());
 
     mdns.addServiceRecord("_webthing",
                           80,
                           MDNSServiceTCP,
                           "\x06path=/");
-
+#endif
     server.begin();
   }
 
   void update() {
+#ifdef CONFIG_MDNS
     mdns.run();
-
+#endif
     if (!client) {
       EthernetClient client = server.available();
       if (!client) {
@@ -203,8 +221,10 @@ private:
   String name, ip;
   EthernetServer server;
   EthernetClient client;
+#ifdef CONFIG_MDNS
   EthernetUDP udp;
   MDNS mdns;
+#endif
 
   ReadState state = STATE_READ_METHOD;
   String uri = "";
