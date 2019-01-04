@@ -37,13 +37,13 @@ const char* password = "...";
 #define OLED_DC    0
 #define OLED_CS    13
 #define OLED_RESET 15
-Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, (int8_t)OLED_DC, OLED_RESET, OLED_CS);
 
 /* Uncomment this block to use hardware SPI
 #define OLED_DC     6
 #define OLED_CS     7
 #define OLED_RESET  8
-Adafruit_SSD1306 display(OLED_DC, OLED_RESET, OLED_CS);
+Adafruit_SSD1306 display(OLED_DC, OLED_RESET, (int8_t)OLED_CS);
 */
 
 const int textHeight = 8;
