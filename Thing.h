@@ -32,6 +32,10 @@ public:
   String atType;
   ThingProperty* next = nullptr;
 
+  bool readOnly = false;
+  const char** propertyEnum = nullptr;
+  String unit="";
+
   ThingProperty(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_):
     id(id_),
     description(description_),

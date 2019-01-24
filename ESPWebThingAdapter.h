@@ -167,6 +167,33 @@ private:
         prop["type"] = "string";
         break;
       }
+
+      prop["readOnly"] = property->readOnly;      
+      
+      if (property->unit != "")
+      {
+        prop["unit"] = property->unit;
+      }
+
+      const char **enumVal = property->propertyEnum;
+      bool hasEnum = false;
+
+      while (property->propertyEnum != nullptr && (*enumVal) != nullptr && !hasEnum)
+      {
+        hasEnum = true;
+      }
+
+      if (hasEnum)
+      {
+        enumVal = property->propertyEnum;
+        JsonArray &propEnum = prop.createNestedArray("enum");
+        while (property->propertyEnum != nullptr && (*enumVal) != nullptr)
+        {
+          propEnum.add(*enumVal);
+          enumVal++;
+        }
+      }
+
       if (property->atType != nullptr) {
         prop["@type"] = property->atType;
       }
