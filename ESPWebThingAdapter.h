@@ -168,27 +168,21 @@ private:
         break;
       }
 
-      prop["readOnly"] = property->readOnly;      
+      if (property->readOnly) {
+        prop["readOnly"] = true;
+      }      
       
-      if (property->unit != "")
-      {
+      if (property->unit != "") {
         prop["unit"] = property->unit;
       }
 
       const char **enumVal = property->propertyEnum;
-      bool hasEnum = false;
-
-      while (property->propertyEnum != nullptr && (*enumVal) != nullptr && !hasEnum)
-      {
-        hasEnum = true;
-      }
-
-      if (hasEnum)
-      {
+      bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullPtr);
+      
+      if (hasEnum) {
         enumVal = property->propertyEnum;
         JsonArray &propEnum = prop.createNestedArray("enum");
-        while (property->propertyEnum != nullptr && (*enumVal) != nullptr)
-        {
+        while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
           propEnum.add(*enumVal);
           enumVal++;
         }

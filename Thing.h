@@ -34,7 +34,7 @@ public:
 
   bool readOnly = false;
   const char** propertyEnum = nullptr;
-  String unit="";
+  String unit = "";
 
   ThingProperty(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_):
     id(id_),

@@ -98,7 +98,6 @@ void setup(void) {
   //deviceColor.readOnly = true;
   //deviceColor.unit = "HEX";
 
-
   ThingPropertyValue colorValue;
   colorValue.string = &lastColor; //default color is white
   deviceColor.setValue(colorValue);
