@@ -25,7 +25,6 @@
 
 #define ESP_MAX_PUT_BODY_SIZE 512
 
-
 class WebThingAdapter {
 public:
   WebThingAdapter(String _name, IPAddress _ip): name(_name), server(80), ip(_ip.toString()) {
@@ -49,9 +48,12 @@ public:
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
       String deviceBase = "/things/" + device->id;
+
+      String propertiesBase = deviceBase + "/properties";
+
       ThingProperty* property = device->firstProperty;
       while (property != nullptr) {
-        String propertyBase = deviceBase + "/properties/" + property->id;
+        String propertyBase = propertiesBase + "/" + property->id;
         this->server.on(propertyBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingPropertyGet, this, std::placeholders::_1, property));
         this->server.on(propertyBase.c_str(), HTTP_PUT,
           std::bind(&WebThingAdapter::handleThingPropertyPut, this, std::placeholders::_1, property),
@@ -62,6 +64,7 @@ public:
         property = property->next;
       }
 
+      this->server.on(propertiesBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingPropertyGetAll, this, std::placeholders::_1, device));
       this->server.on(deviceBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThing, this, std::placeholders::_1, device));
 
       device = device->next;
@@ -151,27 +154,34 @@ private:
       type++;
     }
 
-    JsonObject& props = descr.createNestedObject("properties");
-
     ThingProperty* property = device->firstProperty;
-    while (property != nullptr) {
-      JsonObject& prop = props.createNestedObject(property->id);
-      switch (property->type) {
-      case BOOLEAN:
-        prop["type"] = "boolean";
-        break;
-      case NUMBER:
-        prop["type"] = "number";
-        break;
-      case STRING:
-        prop["type"] = "string";
-        break;
+    if (property) {
+      String propertiesBase = "/things/" + device->id + "/properties";
+      JsonArray& links = descr.createNestedArray("links");
+      JsonObject& links_prop = links.createNestedObject();
+      links_prop["rel"] = "properties";
+      links_prop["href"] = propertiesBase;
+
+      JsonObject& props = descr.createNestedObject("properties");
+      while (property != nullptr) {
+        JsonObject& prop = props.createNestedObject(property->id);
+        switch (property->type) {
+        case BOOLEAN:
+          prop["type"] = "boolean";
+          break;
+        case NUMBER:
+          prop["type"] = "number";
+          break;
+        case STRING:
+          prop["type"] = "string";
+          break;
+        }
+        if (property->atType != nullptr) {
+          prop["@type"] = property->atType;
+        }
+        prop["href"] = propertiesBase + "/" + property->id;
+        property = property->next;
       }
-      if (property->atType != nullptr) {
-        prop["@type"] = property->atType;
-      }
-      prop["href"] = "/things/" + device->id + "/properties/" + property->id;
-      property = property->next;
     }
   }
 
@@ -189,14 +199,7 @@ private:
     request->send(response);
   }
 
-  void handleThingPropertyGet(AsyncWebServerRequest *request, ThingProperty* property) {
-    if (!verifyHost(request)) {
-      return;
-    }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-
-    DynamicJsonBuffer buf(256);
-    JsonObject& prop = buf.createObject();
+  void serializeProperty(ThingProperty* property, JsonObject& prop) {
     switch (property->type) {
     case BOOLEAN:
       prop[property->id] = property->getValue().boolean;
@@ -208,11 +211,39 @@ private:
       prop[property->id] = *property->getValue().string;
       break;
     }
+  }
 
+  void handleThingPropertyGet(AsyncWebServerRequest *request, ThingProperty* property) {
+    if (!verifyHost(request)) {
+      return;
+    }
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+    DynamicJsonBuffer buf(256);
+    JsonObject& prop = buf.createObject();
+    serializeProperty(property, prop);
     prop.printTo(*response);
     request->send(response);
   }
 
+  void handleThingPropertyGetAll(AsyncWebServerRequest *request, ThingDevice* device) {
+    String propertiesBase = "/things/" + device->id + "/properties";
+    if (request->url() != propertiesBase && request->url() != propertiesBase + "/") {
+      request->send(404);
+    } else {
+      AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+      DynamicJsonBuffer buf(256);
+      JsonObject& prop = buf.createObject();
+      ThingProperty *property = device->firstProperty;
+      while (property != nullptr) {
+        serializeProperty(property, prop);
+        property = property->next;
+      }
+      prop.printTo(*response);
+      request->send(response);
+    }
+  }
 
   void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
     if ( total >= ESP_MAX_PUT_BODY_SIZE || index+len >= ESP_MAX_PUT_BODY_SIZE) {
