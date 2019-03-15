@@ -170,15 +170,15 @@ private:
 
       if (property->readOnly) {
         prop["readOnly"] = true;
-      }      
-      
+      }
+
       if (property->unit != "") {
         prop["unit"] = property->unit;
       }
 
       const char **enumVal = property->propertyEnum;
-      bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullPtr);
-      
+      bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
+
       if (hasEnum) {
         enumVal = property->propertyEnum;
         JsonArray &propEnum = prop.createNestedArray("enum");
