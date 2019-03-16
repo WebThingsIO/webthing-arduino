@@ -25,6 +25,10 @@ const int ledPin = LED_BUILTIN;
 const int ledPin = 13;  // manully configure LED pin
 #endif
 
+//for optional properties
+//const char * valEnum[5] = {"RED", "GREEN", "BLACK", "white", nullptr};
+//const char * valEnum[5] = {"#db4a4a", "#4adb58", "000000", "ffffff", nullptr};
+
 WebThingAdapter* adapter;
 
 const char* deviceTypes = {"Light", "OnOffSwitch", "ColorControl", nullptr};
@@ -88,6 +92,11 @@ void setup(void) {
   levelValue.number = 100; // default brightness TODO
   deviceLevel.setValue(levelValue);
   device.addProperty(&deviceLevel);
+
+  //optional properties
+  //deviceColor.propertyEnum = valEnum;
+  //deviceColor.readOnly = true;
+  //deviceColor.unit = "HEX";
 
   ThingPropertyValue colorValue;
   colorValue.string = &lastColor; //default color is white
