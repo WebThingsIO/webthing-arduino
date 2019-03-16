@@ -303,7 +303,7 @@ private:
     sendOk();
     sendHeaders();
 
-    StaticJsonBuffer<2048> buf;
+    DynamicJsonBuffer buf;
     JsonArray& things = buf.createArray();
     ThingDevice* device = firstDevice;
     while (device != nullptr) {
@@ -322,7 +322,7 @@ private:
     sendOk();
     sendHeaders();
 
-    StaticJsonBuffer<512> buf;
+    DynamicJsonBuffer buf;
     JsonObject& descr = buf.createObject();
     serializeDevice(descr, device);
 
@@ -335,7 +335,7 @@ private:
     sendOk();
     sendHeaders();
 
-    StaticJsonBuffer<256> buf;
+    DynamicJsonBuffer buf;
     JsonObject& prop = buf.createObject();
     switch (property->type) {
     case BOOLEAN:
@@ -356,7 +356,7 @@ private:
   void handlePropertyPut(ThingProperty* property) {
     sendOk();
     sendHeaders();
-    StaticJsonBuffer<256> newBuffer;
+    DynamicJsonBuffer newBuffer;
     JsonObject& newProp = newBuffer.parseObject(content);
     JsonVariant newValue = newProp[property->id];
 
