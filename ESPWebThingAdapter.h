@@ -125,7 +125,7 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonBuffer buf(4096);
+    DynamicJsonBuffer buf(1024);
     JsonArray& things = buf.createArray();
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
