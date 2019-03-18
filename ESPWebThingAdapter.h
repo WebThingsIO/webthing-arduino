@@ -72,7 +72,7 @@ public:
   }
 
   void update() {
-    // non implemented, async web-server
+    MDNS.update();
   }
 
   void addDevice(ThingDevice* device) {
