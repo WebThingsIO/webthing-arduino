@@ -72,7 +72,9 @@ public:
   }
 
   void update() {
+#ifdef ESP8266
     MDNS.update();
+#endif
   }
 
   void addDevice(ThingDevice* device) {
