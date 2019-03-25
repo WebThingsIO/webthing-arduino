@@ -75,7 +75,9 @@ public:
   }
 
   void update() {
-    // non implemented, async web-server
+#ifdef ESP8266
+    MDNS.update();
+#endif
   }
 
   void addDevice(ThingDevice* device) {
@@ -128,7 +130,7 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonBuffer buf(4096);
+    DynamicJsonBuffer buf(1024);
     JsonArray& things = buf.createArray();
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
@@ -176,6 +178,27 @@ private:
           prop["type"] = "string";
           break;
         }
+
+        if (property->readOnly) {
+          prop["readOnly"] = true;
+        }
+  
+        if (property->unit != "") {
+          prop["unit"] = property->unit;
+        }
+  
+        const char **enumVal = property->propertyEnum;
+        bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
+  
+        if (hasEnum) {
+          enumVal = property->propertyEnum;
+          JsonArray &propEnum = prop.createNestedArray("enum");
+          while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
+            propEnum.add(*enumVal);
+            enumVal++;
+          }
+        }
+
         if (property->atType != nullptr) {
           prop["@type"] = property->atType;
         }
