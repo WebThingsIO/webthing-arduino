@@ -60,7 +60,7 @@ enum ReadState {
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, uint32_t _ip): name(_name), server(80)
+  WebThingAdapter(String _name, uint32_t _ip, uint16_t _port = 80): name(_name), server(_port), port(_port)
 #ifdef CONFIG_MDNS
   , mdns(udp)
 #endif
@@ -80,7 +80,7 @@ public:
     mdns.begin(Ethernet.localIP(), name.c_str());
 
     mdns.addServiceRecord("_webthing",
-                          80,
+                          port,
                           MDNSServiceTCP,
                           "\x06path=/");
 #endif
@@ -219,6 +219,7 @@ public:
   }
 private:
   String name, ip;
+  uint16_t port;
   EthernetServer server;
   EthernetClient client;
 #ifdef CONFIG_MDNS

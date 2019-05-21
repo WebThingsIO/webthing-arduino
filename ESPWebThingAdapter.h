@@ -27,7 +27,7 @@
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, IPAddress _ip): name(_name), server(80), ip(_ip.toString()) {
+  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80): name(_name), server(_port), ip(_ip.toString()), port(_port) {
   }
 
   void begin() {
@@ -35,7 +35,7 @@ public:
       Serial.println("MDNS responder started");
     }
 
-    MDNS.addService("webthing", "tcp", 80);
+    MDNS.addService("webthing", "tcp", port);
     MDNS.addServiceTxt("webthing", "tcp", "path", "/");
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
@@ -94,6 +94,7 @@ private:
   AsyncWebServer server;
   String name;
   String ip;
+  uint16_t port;
   ThingDevice* firstDevice = nullptr;
   ThingDevice* lastDevice = nullptr;
   char body_data[ESP_MAX_PUT_BODY_SIZE];
