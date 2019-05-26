@@ -1,4 +1,7 @@
 *~
 **/build-*/*
 /tmp/
-
+.vscode
+.pioenvs
+.piolibdeps
+.pio
