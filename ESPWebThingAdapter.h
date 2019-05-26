@@ -16,6 +16,7 @@
 
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
+
 #ifdef ESP8266
 #include <ESP8266mDNS.h>
 #else
@@ -27,7 +28,7 @@
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80): name(_name), server(_port), ip(_ip.toString()), port(_port) {
+  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80): server(_port), name(_name), ip(_ip.toString()), port(_port) {
   }
 
   void begin() {
@@ -78,6 +79,30 @@ public:
 #ifdef ESP8266
     MDNS.update();
 #endif
+#ifndef WITHOUT_WS
+  // Send changed properties as defined in "4.5 propertyStatus message"
+  // Do this by loop over all devices and properties and send changed properties
+  ThingDevice* device = this->firstDevice;
+  while (device != nullptr) {
+    ThingProperty* property = device->firstProperty;
+    while (property != nullptr) {
+      ThingPropertyValue* value = property->changedValueOrNull();
+      if (value) {
+        DynamicJsonBuffer buf(1024);
+        JsonObject& prop = buf.createObject();
+        this->serializeProperty(property, prop);
+        String jsonStr;
+        prop.printTo(jsonStr);
+        // Inform all connected ws clients of a Thing about changed properties
+        ((AsyncWebSocket*)device->ws)->textAll(jsonStr.c_str(),jsonStr.length());
+      }
+      property = property->next;
+    }
+    device = device->next;
+  }
+
+    
+#endif
   }
 
   void addDevice(ThingDevice* device) {
@@ -88,10 +113,19 @@ public:
       this->lastDevice->next = device;
       this->lastDevice = device;
     }
+    // Initiate the websocket instance
+    #ifndef WITHOUT_WS
+    AsyncWebSocket* ws = new AsyncWebSocket("/things/" + device->id);
+    device->ws = ws;
+    // AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len, ThingDevice* device
+    ws->onEvent(std::bind(&WebThingAdapter::handleWS, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, device));
+    this->server.addHandler(ws);
+    #endif
   }
 
 private:
   AsyncWebServer server;
+
   String name;
   String ip;
   uint16_t port;
@@ -117,6 +151,68 @@ private:
     request->send(403);
     return false;
   }
+
+  #ifndef WITHOUT_WS
+  void sendErrorMsg(DynamicJsonBuffer &buffer, AsyncWebSocketClient& client, int status, const char* msg) {
+      JsonObject& prop = buffer.createObject();
+      prop["error"] = msg;
+      prop["status"] = status;
+      String jsonStr;
+      prop.printTo(jsonStr);
+      client.text(jsonStr.c_str(),jsonStr.length());
+  }
+
+  void handleWS(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *rawData, size_t len, ThingDevice* device) {
+    // Ignore all except data packets
+    if(type != WS_EVT_DATA) return;
+
+    // Only consider non fragmented data
+    AwsFrameInfo * info = (AwsFrameInfo*)arg;
+    if(!info->final || info->index != 0 || info->len != len) return;
+
+    // Web Thing only specifies text, not binary websocket transfers
+    if(info->opcode != WS_TEXT) return;
+
+    // In theory we could just have one websocket for all Things and react on the server->url() to route data.
+    // Controllers will however establish a separate websocket connection for each Thing anyway as of in the
+    // spec. For now each Thing stores its own Websocket connection object therefore.
+
+    // Parse request
+    DynamicJsonBuffer newBuffer(1024);
+    JsonObject& newProp = newBuffer.parseObject(rawData);
+    if (!newProp.success()) {
+      sendErrorMsg(newBuffer, *client, 400, "Invalid json");
+      return;
+    }
+
+    String messageType = newProp["messageType"].as<String>();
+    const JsonVariant& dataVariant = newProp["data"];
+    if (!dataVariant.is<JsonObject>()) {
+      sendErrorMsg(newBuffer, *client, 400, "data must be an object");
+      return;
+    }
+
+    const JsonObject &data = dataVariant.as<const JsonObject&>();
+
+    if (messageType == "setProperty") {
+      for (auto kv : data) {
+        ThingProperty* property = device->findProperty(kv.key);
+        if (property) {
+          setThingProperty(data, property);
+        }
+      } 
+
+      // Send confirmation by sending back the received property object
+      String jsonStr;
+      data.printTo(jsonStr);
+      client->text(jsonStr.c_str(),jsonStr.length());
+    } else if (messageType == "requestAction") {
+      sendErrorMsg(newBuffer, *client, 400, "Not supported yet");
+    } else if (messageType == "addEventSubscription") {
+      sendErrorMsg(newBuffer, *client, 400, "Not supported yet");
+    }
+  }
+  #endif
 
   void handleUnknown(AsyncWebServerRequest *request) {
     if (!verifyHost(request)) {
@@ -158,55 +254,74 @@ private:
     }
 
     ThingProperty* property = device->firstProperty;
-    if (property) {
-      String propertiesBase = "/things/" + device->id + "/properties";
-      JsonArray& links = descr.createNestedArray("links");
+    if (!property) {
+      return;
+    }
+    
+    String propertiesBase = "/things/" + device->id + "/properties";
+    JsonArray& links = descr.createNestedArray("links");
+    {
       JsonObject& links_prop = links.createNestedObject();
       links_prop["rel"] = "properties";
       links_prop["href"] = propertiesBase;
-
-      JsonObject& props = descr.createNestedObject("properties");
-      while (property != nullptr) {
-        JsonObject& prop = props.createNestedObject(property->id);
-        switch (property->type) {
-        case BOOLEAN:
-          prop["type"] = "boolean";
-          break;
-        case NUMBER:
-          prop["type"] = "number";
-          break;
-        case STRING:
-          prop["type"] = "string";
-          break;
-        }
-
-        if (property->readOnly) {
-          prop["readOnly"] = true;
-        }
-  
-        if (property->unit != "") {
-          prop["unit"] = property->unit;
-        }
-  
-        const char **enumVal = property->propertyEnum;
-        bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
-  
-        if (hasEnum) {
-          enumVal = property->propertyEnum;
-          JsonArray &propEnum = prop.createNestedArray("enum");
-          while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
-            propEnum.add(*enumVal);
-            enumVal++;
-          }
-        }
-
-        if (property->atType != nullptr) {
-          prop["@type"] = property->atType;
-        }
-        prop["href"] = propertiesBase + "/" + property->id;
-        property = property->next;
-      }
     }
+
+#ifndef WITHOUT_WS
+    {
+      JsonObject& links_prop = links.createNestedObject();
+      links_prop["rel"] = "alternate";
+      char buffer [33];
+      itoa (port,buffer,10);
+      links_prop["href"] = "ws://"+ip+":"+buffer+"/things/" + device->id;
+    }
+#endif
+
+    JsonObject& props = descr.createNestedObject("properties");
+    while (property != nullptr) {
+      JsonObject& prop = props.createNestedObject(property->id);
+      switch (property->type) {
+      case BOOLEAN:
+        prop["type"] = "boolean";
+        break;
+      case NUMBER:
+        prop["type"] = "number";
+        break;
+      case STRING:
+        prop["type"] = "string";
+        break;
+      }
+
+      if (property->readOnly) {
+        prop["readOnly"] = true;
+      }
+
+      if (property->unit != "") {
+        prop["unit"] = property->unit;
+      }
+
+      const char **enumVal = property->propertyEnum;
+      bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
+
+      if (hasEnum) {
+        enumVal = property->propertyEnum;
+        JsonArray &propEnum = prop.createNestedArray("enum");
+        while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
+          propEnum.add(*enumVal);
+          enumVal++;
+        }
+      }
+
+      if (property->atType != nullptr) {
+        prop["@type"] = property->atType;
+      }
+
+      // 2.9 Property object: A links array (An array of Link objects linking to one or more representations of a Property resource, each with an implied default rel=property.)
+      JsonObject& inline_links_prop = prop.createNestedObject("links");
+      inline_links_prop["href"] = propertiesBase + "/" + property->id;
+
+      property = property->next;
+    }
+  
   }
 
   void handleThing(AsyncWebServerRequest *request, ThingDevice*& device) {
@@ -278,6 +393,28 @@ private:
     b_has_body_data = true;
   }
 
+  void setThingProperty(const JsonObject& newProp, ThingProperty* property) {
+    const JsonVariant newValue = newProp[property->id];
+
+    switch (property->type) {
+    case BOOLEAN: {
+      ThingPropertyValue value;
+      value.boolean = newValue.as<bool>();
+      property->setValue(value);
+      break;
+    }
+    case NUMBER: {
+      ThingPropertyValue value;
+      value.number = newValue.as<double>();
+      property->setValue(value);
+      break;
+    }
+    case STRING:
+      *(property->getValue().string) = newValue.as<String>();
+      break;
+    }
+  }
+
   void handleThingPropertyPut(AsyncWebServerRequest *request, ThingProperty* property) {
     if (!verifyHost(request)) {
       return;
@@ -289,34 +426,19 @@ private:
 
     DynamicJsonBuffer newBuffer(256);
     JsonObject& newProp = newBuffer.parseObject(body_data);
-    if (newProp.success()) {
-      JsonVariant newValue = newProp[property->id];
-
-      switch (property->type) {
-      case BOOLEAN: {
-        ThingPropertyValue value;
-        value.boolean = newValue.as<bool>();
-        property->setValue(value);
-        break;
-      }
-      case NUMBER: {
-        ThingPropertyValue value;
-        value.number = newValue.as<double>();
-        property->setValue(value);
-        break;
-      }
-      case STRING:
-        *property->getValue().string = newValue.as<String>();
-        break;
-      }
-
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
-      newProp.printTo(*response);
-      request->send(response);
-    } else {
-      // unable to parse json
+    if (!newProp.success()) { // unable to parse json
+      b_has_body_data = false;
+      memset(body_data,0,sizeof(body_data));
       request->send(500);
+      return;
     }
+
+    setThingProperty(newProp, property);
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    newProp.printTo(*response);
+    request->send(response);
+
     b_has_body_data = false;
     memset(body_data,0,sizeof(body_data));
   }
