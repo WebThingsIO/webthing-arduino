@@ -12,6 +12,10 @@
 #ifndef MOZILLA_IOT_THING_H
 #define MOZILLA_IOT_THING_H
 
+#if !defined(WITHOUT_WS) && defined(ESP8266)
+#include <ESPAsyncWebServer.h>
+#endif
+
 enum ThingPropertyType {
   BOOLEAN,
   NUMBER,
@@ -45,6 +49,17 @@ public:
 
   void setValue(ThingPropertyValue newValue) {
     this->value = newValue;
+    this->hasChanged = true;
+  }
+
+  /**
+   * Returns the property value if it has been changed via {@link setValue} since
+   * the last call or returns a nullptr.
+   */ 
+  ThingPropertyValue* changedValueOrNull() {
+    ThingPropertyValue* v = this->hasChanged ? &this->value : nullptr;
+    this->hasChanged = false;
+    return v;
   }
 
   ThingPropertyValue getValue() {
@@ -53,6 +68,7 @@ public:
 
 private:
   ThingPropertyValue value = {false};
+  bool hasChanged = false;
 };
 
 class ThingDevice {
@@ -60,6 +76,9 @@ public:
   String id;
   String name;
   const char** type;
+  #if !defined(WITHOUT_WS) && defined(ESP8266)
+  AsyncWebSocket* ws = nullptr;
+  #endif
   ThingDevice* next = nullptr;
   ThingProperty* firstProperty = nullptr;
   ThingProperty* lastProperty = nullptr;
@@ -68,6 +87,21 @@ public:
     id(_id),
     name(_name),
     type(_type) {
+  }
+
+  ~ThingDevice() {
+    #if !defined(WITHOUT_WS) && defined(ESP8266)
+    if (ws) delete ws;
+    #endif
+  }
+
+  ThingProperty* findProperty(const char* id) {
+    ThingProperty* p = this->firstProperty;
+    while (p) {
+      if (!strcmp(p->id.c_str(), id)) return p;
+      p = p->next;
+    }
+    return nullptr;
   }
 
   void addProperty(ThingProperty* property) {
