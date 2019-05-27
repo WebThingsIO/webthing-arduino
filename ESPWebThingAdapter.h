@@ -50,22 +50,28 @@ public:
     while (device != nullptr) {
       String deviceBase = "/things/" + device->id;
 
-      String propertiesBase = deviceBase + "/properties";
-
-      ThingProperty* property = device->firstProperty;
+      ThingProperty* property = device->rootProperty;
       while (property != nullptr) {
-        String propertyBase = propertiesBase + "/" + property->id;
-        this->server.on(propertyBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingPropertyGet, this, std::placeholders::_1, property));
+        String propertyBase = deviceBase + "/properties/" + property->id;
+        this->server.on(propertyBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetItem, this, std::placeholders::_1, property));
         this->server.on(propertyBase.c_str(), HTTP_PUT,
           std::bind(&WebThingAdapter::handleThingPropertyPut, this, std::placeholders::_1, property),
           NULL,
           std::bind(&WebThingAdapter::handleBody, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5)
         );
 
-        property = property->next;
+        property = (ThingProperty*) property->next;
       }
 
-      this->server.on(propertiesBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingPropertyGetAll, this, std::placeholders::_1, device));
+      ThingEvent* event = device->rootEvent;
+      while (event != nullptr) {
+        String eventBase = deviceBase + "/events/" + event->id;
+        this->server.on(eventBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetItem, this, std::placeholders::_1, event));
+        event = (ThingEvent*) event->next;
+      }
+
+      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->rootProperty));
+      this->server.on((deviceBase + "/events").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->rootEvent));
       this->server.on(deviceBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThing, this, std::placeholders::_1, device));
 
       device = device->next;
@@ -75,33 +81,46 @@ public:
     this->server.begin();
   }
 
+#ifndef WITHOUT_WS
+  void sendChangedPropsOrEvents(ThingDevice* device, const char* type, ThingItem* rootItem) {
+    // Prepare one buffer per device
+    DynamicJsonBuffer buf(1024);
+    JsonObject& message = buf.createObject();
+    message["messageType"] = type;
+    JsonObject& prop = message.createNestedObject("data");
+    bool dataToSend = false;
+    ThingItem* item = rootItem;
+    while (item != nullptr) {
+      ThingPropertyValue* value = item->changedValueOrNull();
+      if (value) {
+        dataToSend = true;
+        this->serializeThingItem(item, prop);
+      }
+      item = item->next;
+    }
+    if (dataToSend) {
+      String jsonStr;
+      message.printTo(jsonStr);
+      // Inform all connected ws clients of a Thing about changed properties
+      ((AsyncWebSocket*)device->ws)->textAll(jsonStr.c_str(),jsonStr.length());
+    }
+  }
+#endif
+
   void update() {
 #ifdef ESP8266
     MDNS.update();
 #endif
 #ifndef WITHOUT_WS
-  // Send changed properties as defined in "4.5 propertyStatus message"
-  // Do this by loop over all devices and properties and send changed properties
+  // * Send changed properties as defined in "4.5 propertyStatus message"
+  // * Send events as defined in "4.7 event message"
+  // Do this by looping over all devices and properties/events
   ThingDevice* device = this->firstDevice;
   while (device != nullptr) {
-    ThingProperty* property = device->firstProperty;
-    while (property != nullptr) {
-      ThingPropertyValue* value = property->changedValueOrNull();
-      if (value) {
-        DynamicJsonBuffer buf(1024);
-        JsonObject& prop = buf.createObject();
-        this->serializeProperty(property, prop);
-        String jsonStr;
-        prop.printTo(jsonStr);
-        // Inform all connected ws clients of a Thing about changed properties
-        ((AsyncWebSocket*)device->ws)->textAll(jsonStr.c_str(),jsonStr.length());
-      }
-      property = property->next;
-    }
+    sendChangedPropsOrEvents(device, "propertyStatus", device->rootProperty);
+    sendChangedPropsOrEvents(device, "event", device->rootEvent);
     device = device->next;
   }
-
-    
 #endif
   }
 
@@ -209,7 +228,8 @@ private:
     } else if (messageType == "requestAction") {
       sendErrorMsg(newBuffer, *client, 400, "Not supported yet");
     } else if (messageType == "addEventSubscription") {
-      sendErrorMsg(newBuffer, *client, 400, "Not supported yet");
+      // We report back all property state changes. We'd require a map
+      // of subscribed properties per websocket connection otherwise
     }
   }
   #endif
@@ -242,6 +262,62 @@ private:
 
   }
 
+  void serializePropertyOrEvent(JsonObject& descr, ThingDevice* device, const char* type, bool isProp, ThingItem* item) {
+    String basePath = "/things/" + device->id + "/"+ type + "/";
+    JsonObject& props = descr.createNestedObject(type);
+    while (item != nullptr) {
+      JsonObject& prop = props.createNestedObject(item->id);
+      switch (item->type) {
+      case NO_STATE:
+        prop["type"] = "null";
+        break;
+      case BOOLEAN:
+        prop["type"] = "boolean";
+        break;
+      case NUMBER:
+        prop["type"] = "number";
+        break;
+      case STRING:
+        prop["type"] = "string";
+        break;
+      }
+
+      if (item->readOnly) {
+        prop["readOnly"] = true;
+      }
+
+      if (item->unit != "") {
+        prop["unit"] = item->unit;
+      }
+
+      if (isProp) {
+        ThingProperty* property = (ThingProperty*)item;
+        const char **enumVal = property->propertyEnum;
+        bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
+
+        if (hasEnum) {
+          enumVal = property->propertyEnum;
+          JsonArray &propEnum = prop.createNestedArray("enum");
+          while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
+            propEnum.add(*enumVal);
+            enumVal++;
+          }
+        }
+      }
+
+      if (item->atType != nullptr) {
+        prop["@type"] = item->atType;
+      }
+
+      // 2.9 Property object: A links array (An array of Link objects linking to one or more representations of a Property resource, each with an implied default rel=property.)
+      JsonArray& inline_links = prop.createNestedArray("links");
+      JsonObject& inline_links_prop = inline_links.createNestedObject();
+      inline_links_prop["href"] = basePath + item->id;
+
+      item = item->next;
+    }
+  }
+
   void serializeDevice(JsonObject& descr, ThingDevice* device) {
     descr["id"] = device->id;
     descr["title"] = device->title;
@@ -259,17 +335,17 @@ private:
       type++;
     }
 
-    ThingProperty* property = device->firstProperty;
-    if (!property) {
-      return;
-    }
-    
-    String propertiesBase = "/things/" + device->id + "/properties";
     JsonArray& links = descr.createNestedArray("links");
     {
       JsonObject& links_prop = links.createNestedObject();
       links_prop["rel"] = "properties";
-      links_prop["href"] = propertiesBase;
+      links_prop["href"] = "/things/" + device->id + "/properties";
+    }
+
+    {
+      JsonObject& links_prop = links.createNestedObject();
+      links_prop["rel"] = "events";
+      links_prop["href"] = "/things/" + device->id + "/events";
     }
 
 #ifndef WITHOUT_WS
@@ -282,51 +358,14 @@ private:
     }
 #endif
 
-    JsonObject& props = descr.createNestedObject("properties");
-    while (property != nullptr) {
-      JsonObject& prop = props.createNestedObject(property->id);
-      switch (property->type) {
-      case BOOLEAN:
-        prop["type"] = "boolean";
-        break;
-      case NUMBER:
-        prop["type"] = "number";
-        break;
-      case STRING:
-        prop["type"] = "string";
-        break;
-      }
+    ThingProperty* property = device->rootProperty;
+    if (property) {
+      serializePropertyOrEvent(descr,device,"properties",true,property);
+    }
 
-      if (property->readOnly) {
-        prop["readOnly"] = true;
-      }
-
-      if (property->unit != "") {
-        prop["unit"] = property->unit;
-      }
-
-      const char **enumVal = property->propertyEnum;
-      bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
-
-      if (hasEnum) {
-        enumVal = property->propertyEnum;
-        JsonArray &propEnum = prop.createNestedArray("enum");
-        while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
-          propEnum.add(*enumVal);
-          enumVal++;
-        }
-      }
-
-      if (property->atType != nullptr) {
-        prop["@type"] = property->atType;
-      }
-
-      // 2.9 Property object: A links array (An array of Link objects linking to one or more representations of a Property resource, each with an implied default rel=property.)
-      JsonArray& inline_links = prop.createNestedArray("links");
-      JsonObject& inline_links_prop = inline_links.createNestedObject();
-      inline_links_prop["href"] = propertiesBase + "/" + property->id;
-
-      property = property->next;
+    ThingEvent* event = device->rootEvent;
+    if (event) {
+      serializePropertyOrEvent(descr,device,"events",false,event);
     }
   }
 
@@ -344,21 +383,24 @@ private:
     request->send(response);
   }
 
-  void serializeProperty(ThingProperty* property, JsonObject& prop) {
-    switch (property->type) {
+  void serializeThingItem(ThingItem* item, JsonObject& prop) {
+    switch (item->type) {
+    case NO_STATE:
+      prop[item->id] = "";
+      break;
     case BOOLEAN:
-      prop[property->id] = property->getValue().boolean;
+      prop[item->id] = item->getValue().boolean;
       break;
     case NUMBER:
-      prop[property->id] = property->getValue().number;
+      prop[item->id] = item->getValue().number;
       break;
     case STRING:
-      prop[property->id] = *property->getValue().string;
+      prop[item->id] = *item->getValue().string;
       break;
     }
   }
 
-  void handleThingPropertyGet(AsyncWebServerRequest *request, ThingProperty* property) {
+  void handleThingGetItem(AsyncWebServerRequest *request, ThingItem* item) {
     if (!verifyHost(request)) {
       return;
     }
@@ -366,28 +408,23 @@ private:
 
     DynamicJsonBuffer buf(256);
     JsonObject& prop = buf.createObject();
-    serializeProperty(property, prop);
+    serializeThingItem(item, prop);
     prop.printTo(*response);
     request->send(response);
   }
 
-  void handleThingPropertyGetAll(AsyncWebServerRequest *request, ThingDevice* device) {
-    String propertiesBase = "/things/" + device->id + "/properties";
-    if (request->url() != propertiesBase && request->url() != propertiesBase + "/") {
-      request->send(404);
-    } else {
-      AsyncResponseStream *response = request->beginResponseStream("application/json");
+  void handleThingGetAll(AsyncWebServerRequest *request, ThingDevice* device, ThingItem* rootItem) {
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-      DynamicJsonBuffer buf(256);
-      JsonObject& prop = buf.createObject();
-      ThingProperty *property = device->firstProperty;
-      while (property != nullptr) {
-        serializeProperty(property, prop);
-        property = property->next;
-      }
-      prop.printTo(*response);
-      request->send(response);
+    DynamicJsonBuffer buf(256);
+    JsonObject& prop = buf.createObject();
+    ThingItem *item = rootItem;
+    while (item != nullptr) {
+      serializeThingItem(item, prop);
+      item = item->next;
     }
+    prop.printTo(*response);
+    request->send(response);
   }
 
   void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
@@ -403,6 +440,9 @@ private:
     const JsonVariant newValue = newProp[property->id];
 
     switch (property->type) {
+    case NO_STATE: {
+      break;
+    }
     case BOOLEAN: {
       ThingPropertyValue value;
       value.boolean = newValue.as<bool>();
