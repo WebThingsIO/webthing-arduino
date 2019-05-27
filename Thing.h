@@ -17,6 +17,7 @@
 #endif
 
 enum ThingPropertyType {
+  NO_STATE,
   BOOLEAN,
   NUMBER,
   STRING
@@ -28,19 +29,18 @@ union ThingPropertyValue {
   String* string;
 };
 
-class ThingProperty {
+class ThingItem {
 public:
   String id;
   String description;
   ThingPropertyType type;
   String atType;
-  ThingProperty* next = nullptr;
+  ThingItem* next = nullptr;
 
   bool readOnly = false;
-  const char** propertyEnum = nullptr;
   String unit = "";
 
-  ThingProperty(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_):
+  ThingItem(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_):
     id(id_),
     description(description_),
     type(type_),
@@ -71,6 +71,15 @@ private:
   bool hasChanged = false;
 };
 
+class ThingProperty : public ThingItem {
+public:
+  const char** propertyEnum = nullptr;
+
+ThingProperty(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_) : ThingItem(id_,description_,type_,atType_) {}
+};
+
+using ThingEvent = ThingItem;
+
 class ThingDevice {
 public:
   String id;
@@ -80,8 +89,8 @@ public:
   AsyncWebSocket* ws = nullptr;
   #endif
   ThingDevice* next = nullptr;
-  ThingProperty* firstProperty = nullptr;
-  ThingProperty* lastProperty = nullptr;
+  ThingProperty* rootProperty = nullptr;
+  ThingEvent* rootEvent = nullptr;
 
   ThingDevice(const char* _id, const char* _title, const char** _type):
     id(_id),
@@ -96,22 +105,21 @@ public:
   }
 
   ThingProperty* findProperty(const char* id) {
-    ThingProperty* p = this->firstProperty;
+    ThingProperty* p = this->rootProperty;
     while (p) {
       if (!strcmp(p->id.c_str(), id)) return p;
-      p = p->next;
+      p = (ThingProperty*)p->next;
     }
     return nullptr;
   }
 
   void addProperty(ThingProperty* property) {
-    if (lastProperty == nullptr) {
-      firstProperty = property;
-      lastProperty = property;
-    } else {
-      lastProperty->next = property;
-      lastProperty = property;
-    }
+      property->next = rootProperty;
+      rootProperty = property;
+  }
+  void addEvent(ThingEvent* event) {
+      event->next = rootEvent;
+      rootEvent = event;
   }
 };
 
