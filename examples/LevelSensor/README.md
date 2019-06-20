@@ -34,7 +34,7 @@ curl http://192.168.1.225/
         "Sensor"
       ],
     "href" : "/things/AnalogSensorDevice",
-    "name" : "Analog Sensor plugged in single pin",
+    "title" : "Analog Sensor plugged in single pin",
     "properties" : { "level" : { 
             "@type" : "LevelProperty",
             "href" : "/things/AnalogSensorDevice/properties/level",
