@@ -242,7 +242,7 @@ private:
   }
 
   void serializeDevice(JsonObject& descr, ThingDevice* device) {
-    descr["name"] = device->name;
+    descr["title"] = device->title;
     descr["href"] = "/things/" + device->id;
     descr["@context"] = "https://iot.mozilla.org/schemas";
 

@@ -74,7 +74,7 @@ private:
 class ThingDevice {
 public:
   String id;
-  String name;
+  String title;
   const char** type;
   #if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
   AsyncWebSocket* ws = nullptr;
@@ -83,9 +83,9 @@ public:
   ThingProperty* firstProperty = nullptr;
   ThingProperty* lastProperty = nullptr;
 
-  ThingDevice(const char* _id, const char* _name, const char** _type):
+  ThingDevice(const char* _id, const char* _title, const char** _type):
     id(_id),
-    name(_name),
+    title(_title),
     type(_type) {
   }
 
