@@ -337,6 +337,7 @@ private:
     while (device != nullptr) {
       JsonObject& descr = things.createNestedObject();
       serializeDevice(descr, device);
+      descr["href"] = "/things/" + device->id;
       device = device->next;
     }
 
