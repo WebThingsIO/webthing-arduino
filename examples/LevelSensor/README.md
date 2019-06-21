@@ -27,20 +27,31 @@ Check from outside:
 
 ```
 curl http://192.168.1.225/
-[ { 
-    "@context" : "https://iot.mozilla.org/schemas",
-    "@type" : [ 
-        "MultiLevelSensor",
-        "Sensor"
-      ],
-    "href" : "/things/AnalogSensorDevice",
-    "title" : "Analog Sensor plugged in single pin",
-    "properties" : { "level" : { 
-            "@type" : "LevelProperty",
-            "href" : "/things/AnalogSensorDevice/properties/level",
-            "type" : "number"
-          } }
-  } ]
+[
+  { 
+    "id": "AnalogSensorDevice",
+    "securityDefinitions": {
+      "nosec_sc": {
+        "scheme": "nosec"
+      }
+    },
+    "security": "nosec_sc",
+    "@context": "https://iot.mozilla.org/schemas",
+    "@type": [ 
+      "MultiLevelSensor",
+      "Sensor"
+    ],
+    "title": "Analog Sensor plugged in single pin",
+    "properties": {
+      "level": { 
+        "@type": "LevelProperty",
+        "href": "/things/AnalogSensorDevice/properties/level",
+        "type": "number"
+      }
+    },
+    "href": "/things/AnalogSensorDevice"
+  }
+]
 
 # Check property value
 curl http://192.168.1.225/things/AnalogSensorDevice/properties/level
