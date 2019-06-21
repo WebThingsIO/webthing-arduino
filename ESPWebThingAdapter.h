@@ -242,9 +242,12 @@ private:
   }
 
   void serializeDevice(JsonObject& descr, ThingDevice* device) {
+    descr["id"] = device->id;
     descr["title"] = device->title;
-    descr["href"] = "/things/" + device->id;
     descr["@context"] = "https://iot.mozilla.org/schemas";
+    descr["securityDefinitions"] = "{\"nosec_sc\": {\"scheme\": \"nosec\"}}";
+    descr["security"] = "nosec_sc";
+    // TODO: descr["base"] = ???
 
     JsonArray& typeJson = descr.createNestedArray("@type");
     const char** type = device->type;
