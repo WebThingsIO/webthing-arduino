@@ -316,12 +316,12 @@ private:
       }
 
       // 2.9 Property object: A links array (An array of Link objects linking to one or more representations of a Property resource, each with an implied default rel=property.)
-      JsonObject& inline_links_prop = prop.createNestedObject("links");
+      JsonArray& inline_links = prop.createNestedArray("links");
+      JsonObject& inline_links_prop = inline_links.createNestedObject();
       inline_links_prop["href"] = propertiesBase + "/" + property->id;
 
       property = property->next;
     }
-  
   }
 
   void handleThing(AsyncWebServerRequest *request, ThingDevice*& device) {
