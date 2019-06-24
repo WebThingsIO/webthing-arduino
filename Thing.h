@@ -12,7 +12,7 @@
 #ifndef MOZILLA_IOT_THING_H
 #define MOZILLA_IOT_THING_H
 
-#if !defined(WITHOUT_WS) && defined(ESP8266)
+#if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
 #include <ESPAsyncWebServer.h>
 #endif
 
@@ -76,7 +76,7 @@ public:
   String id;
   String name;
   const char** type;
-  #if !defined(WITHOUT_WS) && defined(ESP8266)
+  #if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
   AsyncWebSocket* ws = nullptr;
   #endif
   ThingDevice* next = nullptr;
@@ -90,7 +90,7 @@ public:
   }
 
   ~ThingDevice() {
-    #if !defined(WITHOUT_WS) && defined(ESP8266)
+    #if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
     if (ws) delete ws;
     #endif
   }
