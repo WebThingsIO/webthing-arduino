@@ -407,9 +407,11 @@ private:
     descr["id"] = device->id;
     descr["title"] = device->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
-    descr["securityDefinitions"] = "{\"nosec_sc\": {\"scheme\": \"nosec\"}}";
-    descr["security"] = "nosec_sc";
     // TODO: descr["base"] = ???
+
+    JsonObject& securityDefinitions = descr.createNestedObject("securityDefinitions");
+    JsonObject& nosecSc = securityDefinitions.createNestedObject("nosec_sc");
+    nosecSc["scheme"] = "nosec";
 
     JsonArray& typeJson = descr.createNestedArray("@type");
     const char** type = device->type;
