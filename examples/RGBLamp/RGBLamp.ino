@@ -31,7 +31,7 @@ const int ledPin = 13;  // manully configure LED pin
 
 WebThingAdapter* adapter;
 
-const char* deviceTypes = {"Light", "OnOffSwitch", "ColorControl", nullptr};
+const char* deviceTypes[] = {"Light", "OnOffSwitch", "ColorControl", nullptr};
 ThingDevice device("dimmable-color-light", "Dimmable Color Light", deviceTypes);
 
 ThingProperty deviceOn("on", "Whether the led is turned on", BOOLEAN, "OnOffProperty");
