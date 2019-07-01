@@ -55,7 +55,7 @@ public:
   /**
    * Returns the property value if it has been changed via {@link setValue} since
    * the last call or returns a nullptr.
-   */ 
+   */
   ThingPropertyValue* changedValueOrNull() {
     ThingPropertyValue* v = this->hasChanged ? &this->value : nullptr;
     this->hasChanged = false;
@@ -75,7 +75,9 @@ class ThingProperty : public ThingItem {
 public:
   const char** propertyEnum = nullptr;
 
-ThingProperty(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_) : ThingItem(id_,description_,type_,atType_) {}
+  ThingProperty(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_) :
+    ThingItem(id_, description_, type_, atType_) {
+  }
 };
 
 using ThingEvent = ThingItem;

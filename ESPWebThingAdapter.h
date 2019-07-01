@@ -102,7 +102,7 @@ public:
       String jsonStr;
       message.printTo(jsonStr);
       // Inform all connected ws clients of a Thing about changed properties
-      ((AsyncWebSocket*)device->ws)->textAll(jsonStr.c_str(),jsonStr.length());
+      ((AsyncWebSocket*)device->ws)->textAll(jsonStr.c_str(), jsonStr.length());
     }
   }
 #endif
@@ -178,7 +178,7 @@ private:
       prop["status"] = status;
       String jsonStr;
       prop.printTo(jsonStr);
-      client.text(jsonStr.c_str(),jsonStr.length());
+      client.text(jsonStr.c_str(), jsonStr.length());
   }
 
   void handleWS(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *rawData, size_t len, ThingDevice* device) {
@@ -219,12 +219,12 @@ private:
         if (property) {
           setThingProperty(data, property);
         }
-      } 
+      }
 
       // Send confirmation by sending back the received property object
       String jsonStr;
       data.printTo(jsonStr);
-      client->text(jsonStr.c_str(),jsonStr.length());
+      client->text(jsonStr.c_str(), jsonStr.length());
     } else if (messageType == "requestAction") {
       sendErrorMsg(newBuffer, *client, 400, "Not supported yet");
     } else if (messageType == "addEventSubscription") {
@@ -269,7 +269,6 @@ private:
       JsonObject& prop = props.createNestedObject(item->id);
       switch (item->type) {
       case NO_STATE:
-        prop["type"] = "null";
         break;
       case BOOLEAN:
         prop["type"] = "boolean";
@@ -353,19 +352,19 @@ private:
       JsonObject& links_prop = links.createNestedObject();
       links_prop["rel"] = "alternate";
       char buffer [33];
-      itoa (port,buffer,10);
-      links_prop["href"] = "ws://"+ip+":"+buffer+"/things/" + device->id;
+      itoa(port, buffer, 10);
+      links_prop["href"] = "ws://" + ip + ":" + buffer + "/things/" + device->id;
     }
 #endif
 
     ThingProperty* property = device->rootProperty;
     if (property) {
-      serializePropertyOrEvent(descr,device,"properties",true,property);
+      serializePropertyOrEvent(descr, device, "properties", true, property);
     }
 
     ThingEvent* event = device->rootEvent;
     if (event) {
-      serializePropertyOrEvent(descr,device,"events",false,event);
+      serializePropertyOrEvent(descr, device, "events", false, event);
     }
   }
 
@@ -386,7 +385,6 @@ private:
   void serializeThingItem(ThingItem* item, JsonObject& prop) {
     switch (item->type) {
     case NO_STATE:
-      prop[item->id] = "";
       break;
     case BOOLEAN:
       prop[item->id] = item->getValue().boolean;
@@ -428,7 +426,7 @@ private:
   }
 
   void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if ( total >= ESP_MAX_PUT_BODY_SIZE || index+len >= ESP_MAX_PUT_BODY_SIZE) {
+    if (total >= ESP_MAX_PUT_BODY_SIZE || index + len >= ESP_MAX_PUT_BODY_SIZE) {
         return; // cannot store this size..
     }
     // copy to internal buffer
@@ -474,7 +472,7 @@ private:
     JsonObject& newProp = newBuffer.parseObject(body_data);
     if (!newProp.success()) { // unable to parse json
       b_has_body_data = false;
-      memset(body_data,0,sizeof(body_data));
+      memset(body_data, 0, sizeof(body_data));
       request->send(500);
       return;
     }
@@ -486,7 +484,7 @@ private:
     request->send(response);
 
     b_has_body_data = false;
-    memset(body_data,0,sizeof(body_data));
+    memset(body_data, 0, sizeof(body_data));
   }
 
 };
