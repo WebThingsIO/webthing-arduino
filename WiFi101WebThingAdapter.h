@@ -467,7 +467,7 @@ private:
         prop["@type"] = property->atType;
       }
       prop["href"] = "/things/" + device->id + "/properties/" + property->id;
-      property = property->next;
+      property = (ThingProperty*)property->next;
     }
   }
 };
