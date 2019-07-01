@@ -279,7 +279,7 @@ private:
               }
               return;
             }
-            property = property->next;
+            property = (ThingProperty*)property->next;
           }
         }
       }
@@ -340,6 +340,8 @@ private:
     DynamicJsonBuffer buf;
     JsonObject& prop = buf.createObject();
     switch (property->type) {
+    case NO_STATE:
+      break;
     case BOOLEAN:
       prop[property->id] = property->getValue().boolean;
       break;
@@ -363,6 +365,8 @@ private:
     JsonVariant newValue = newProp[property->id];
 
     switch (property->type) {
+    case NO_STATE:
+      break;
     case BOOLEAN: {
       ThingPropertyValue value;
       value.boolean = newValue.as<bool>();
@@ -426,6 +430,8 @@ private:
     while (property != nullptr) {
       JsonObject& prop = props.createNestedObject(property->id);
       switch (property->type) {
+      case NO_STATE:
+        break;
       case BOOLEAN:
         prop["type"] = "boolean";
         break;
