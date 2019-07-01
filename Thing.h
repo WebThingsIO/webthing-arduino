@@ -91,8 +91,8 @@ public:
   AsyncWebSocket* ws = nullptr;
   #endif
   ThingDevice* next = nullptr;
-  ThingProperty* rootProperty = nullptr;
-  ThingEvent* rootEvent = nullptr;
+  ThingProperty* firstProperty = nullptr;
+  ThingEvent* firstEvent = nullptr;
 
   ThingDevice(const char* _id, const char* _title, const char** _type):
     id(_id),
@@ -107,7 +107,7 @@ public:
   }
 
   ThingProperty* findProperty(const char* id) {
-    ThingProperty* p = this->rootProperty;
+    ThingProperty* p = this->firstProperty;
     while (p) {
       if (!strcmp(p->id.c_str(), id)) return p;
       p = (ThingProperty*)p->next;
@@ -116,12 +116,12 @@ public:
   }
 
   void addProperty(ThingProperty* property) {
-      property->next = rootProperty;
-      rootProperty = property;
+      property->next = firstProperty;
+      firstProperty = property;
   }
   void addEvent(ThingEvent* event) {
-      event->next = rootEvent;
-      rootEvent = event;
+      event->next = firstEvent;
+      firstEvent = event;
   }
 };
 

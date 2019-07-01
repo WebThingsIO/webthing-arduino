@@ -50,7 +50,7 @@ public:
     while (device != nullptr) {
       String deviceBase = "/things/" + device->id;
 
-      ThingProperty* property = device->rootProperty;
+      ThingProperty* property = device->firstProperty;
       while (property != nullptr) {
         String propertyBase = deviceBase + "/properties/" + property->id;
         this->server.on(propertyBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetItem, this, std::placeholders::_1, property));
@@ -63,15 +63,15 @@ public:
         property = (ThingProperty*) property->next;
       }
 
-      ThingEvent* event = device->rootEvent;
+      ThingEvent* event = device->firstEvent;
       while (event != nullptr) {
         String eventBase = deviceBase + "/events/" + event->id;
         this->server.on(eventBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetItem, this, std::placeholders::_1, event));
         event = (ThingEvent*) event->next;
       }
 
-      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->rootProperty));
-      this->server.on((deviceBase + "/events").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->rootEvent));
+      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->firstProperty));
+      this->server.on((deviceBase + "/events").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->firstEvent));
       this->server.on(deviceBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThing, this, std::placeholders::_1, device));
 
       device = device->next;
@@ -117,8 +117,8 @@ public:
   // Do this by looping over all devices and properties/events
   ThingDevice* device = this->firstDevice;
   while (device != nullptr) {
-    sendChangedPropsOrEvents(device, "propertyStatus", device->rootProperty);
-    sendChangedPropsOrEvents(device, "event", device->rootEvent);
+    sendChangedPropsOrEvents(device, "propertyStatus", device->firstProperty);
+    sendChangedPropsOrEvents(device, "event", device->firstEvent);
     device = device->next;
   }
 #endif
@@ -357,12 +357,12 @@ private:
     }
 #endif
 
-    ThingProperty* property = device->rootProperty;
+    ThingProperty* property = device->firstProperty;
     if (property) {
       serializePropertyOrEvent(descr, device, "properties", true, property);
     }
 
-    ThingEvent* event = device->rootEvent;
+    ThingEvent* event = device->firstEvent;
     if (event) {
       serializePropertyOrEvent(descr, device, "events", false, event);
     }
