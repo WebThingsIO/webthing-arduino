@@ -41,6 +41,7 @@ CPPFLAGS+=-I${top_reldir}
 ARDUINO_LIBS += Ethernet SPI
 ARDUINO_LIBS += ArduinoMDNS
 ARDUINO_LIBS += ArduinoJson
+ARDUINO_LIBS += WiFi101
 
 -include ${arduino_mk}
 
