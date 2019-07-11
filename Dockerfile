@@ -6,7 +6,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/ .
 #}
 
-FROM i386/debian:stable
+FROM i386/debian:9
 MAINTAINER Philippe Coval (p.coval@samsung.com)
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -36,15 +36,14 @@ RUN echo "#log: ${project}: Setup system" \
   && apt-get clean \
   && sync
 
-ADD . /usr/local/src/${project}/${project}
-WORKDIR /usr/local/src/${project}/${project}
+ADD Makefile /usr/local/opt/${project}/src/${project}/Makefile
+WORKDIR /usr/local/opt/${project}/src/${project}
 RUN echo "#log: ${project}: Preparing sources" \
   && set -x \
   && make rule/setup \
   && sync
 
-ADD . /usr/local/src/${project}/${project}
-WORKDIR /usr/local/src/${project}/${project}
+ADD . /usr/local/opt/${project}/src/${project}
 RUN echo "#log: ${project}: Preparing sources" \
   && set -x \
   && make rule/all \
