@@ -35,7 +35,7 @@ const char* deviceTypes[] = {"Light", "OnOffSwitch", "ColorControl", nullptr};
 ThingDevice device("dimmable-color-light", "Dimmable Color Light", deviceTypes);
 
 ThingProperty deviceOn("on", "Whether the led is turned on", BOOLEAN, "OnOffProperty");
-ThingProperty deviceLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
+ThingProperty deviceBrightness("brightness", "The level of light from 0-100", NUMBER, "BrightnessProperty");
 ThingProperty deviceColor("color", "The color of light in RGB", STRING, "ColorProperty");
 
 bool lastOn = false;
@@ -88,10 +88,10 @@ void setup(void) {
   adapter = new WebThingAdapter("rgb-lamp", WiFi.localIP());
 
   device.addProperty(&deviceOn);
-  ThingPropertyValue levelValue;
-  levelValue.number = 100; // default brightness TODO
-  deviceLevel.setValue(levelValue);
-  device.addProperty(&deviceLevel);
+  ThingPropertyValue brightnessValue;
+  brightnessValue.number = 100; // default brightness TODO
+  deviceBrightness.setValue(brightnessValue);
+  device.addProperty(&deviceBrightness);
 
   //optional properties
   //deviceColor.propertyEnum = valEnum;
@@ -110,13 +110,14 @@ void setup(void) {
   Serial.print(WiFi.localIP());
   Serial.print("/things/");
   Serial.println(device.id);
-
+#ifdef analogWriteRange
   analogWriteRange(255);
+#endif
 }
 
-void update(String* color, int const level) {
+void update(String* color, int const brightness) {
   if (!color) return;
-  float dim = level/100.;
+  float dim = brightness/100.;
   int red,green,blue;
   if (color && (color->length() == 7) && color->charAt(0) == '#') {
     const char* hex = 1+(color->c_str()); // skip leading '#'
@@ -135,15 +136,15 @@ void loop(void) {
   adapter->update();
 
   bool on = deviceOn.getValue().boolean;
-  int level = deviceLevel.getValue().number;
-  update(&lastColor, on ? level : 0);
+  int brightness = deviceBrightness.getValue().number;
+  update(&lastColor, on ? brightness : 0);
 
   if (on != lastOn) {
     Serial.print(device.id);
     Serial.print(": on: ");
     Serial.print(on);
-    Serial.print(", level: ");
-    Serial.print(level);
+    Serial.print(", brightness: ");
+    Serial.print(brightness);
     Serial.print(", color: ");
     Serial.println(lastColor);
   }
