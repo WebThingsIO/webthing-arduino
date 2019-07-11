@@ -44,19 +44,30 @@ USER_LIB_PATH?=${extra_dir}/Arduino/libraries
 
 ArduinoJson_url?=https://github.com/bblanchon/ArduinoJson
 ArduinoJson_dir?=${extra_dir}/Arduino/libraries/ArduinoJson
+ArduinoJson_version?=v5.13.4
 
 ${ArduinoJson_dir}:
 	@mkdir -p ${@D}
-	git clone --depth 1 --recursive ${ArduinoJson_url} $@
+	git clone --depth 1 --recursive --branch ${ArduinoJson_version} ${ArduinoJson_url} $@
 
-ArduinoMDNS_url=https://github.com/arduino-libraries/ArduinoMDNS
+ArduinoMDNS_url?=https://github.com/arduino-libraries/ArduinoMDNS
 ArduinoMDNS_dir?=${extra_dir}/Arduino/libraries/ArduinoMDNS
+ArduinoMDNS_version?=master # TODO pin version
 
 ${ArduinoMDNS_dir}:
 	@mkdir -p ${@D}
 	git clone --depth 1 --recursive ${ArduinoMDNS_url} $@
 
-rule/arduino_lib_dirs: ${ArduinoMDNS_dir} ${ArduinoJson_dir}
+ArduinoWiFi101_url?=https://github.com/arduino-libraries/WiFi101
+ArduinoWiFi101_dir?=${extra_dir}/Arduino/libraries/WiFi101
+ArduinoWiFi101_version?=0.15.3
+
+${ArduinoWiFi101_dir}:
+	@mkdir -p ${@D}
+	git clone --depth 1 --recursive --branch ${ArduinoWiFi101_version} ${ArduinoWiFi101_url} $@
+
+
+rule/arduino_lib_dirs: ${ArduinoMDNS_dir} ${ArduinoJson_dir} ${ArduinoWiFi101_dir}
 	ls $^
 #}
 
