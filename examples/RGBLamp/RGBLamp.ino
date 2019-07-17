@@ -110,8 +110,9 @@ void setup(void) {
   Serial.print(WiFi.localIP());
   Serial.print("/things/");
   Serial.println(device.id);
-
+#ifdef analogWriteRange
   analogWriteRange(255);
+#endif
 }
 
 void update(String* color, int const level) {
