@@ -53,6 +53,7 @@ public:
   }
 
   void begin() {
+    name.toLowerCase();
     mdns.begin(WiFi.localIP(), name.c_str());
 
     mdns.addServiceRecord("_webthing",
