@@ -76,6 +76,7 @@ public:
   }
 
   void begin() {
+    name.toLowerCase();
 #ifdef CONFIG_MDNS
     mdns.begin(Ethernet.localIP(), name.c_str());
 
