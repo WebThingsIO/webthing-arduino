@@ -32,6 +32,7 @@ public:
   }
 
   void begin() {
+    this->name.toLowerCase();
     if (MDNS.begin(this->name.c_str())) {
       Serial.println("MDNS responder started");
     }
