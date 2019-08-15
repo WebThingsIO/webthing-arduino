@@ -302,6 +302,10 @@ private:
         prop["maximum"] = item->maximum;
       }
 
+      if (item->multipleOf > 0) {
+        prop["multipleOf"] = item->multipleOf;
+      }
+
       if (isProp) {
         ThingProperty* property = (ThingProperty*)item;
         const char **enumVal = property->propertyEnum;

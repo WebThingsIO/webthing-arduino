@@ -64,7 +64,7 @@ public:
 #ifdef CONFIG_MDNS
   , mdns(udp)
 #endif
-{
+  {
     ip = "";
     for (int i = 0; i < 4; i++) {
       ip += _ip & 0xff;
@@ -489,10 +489,26 @@ private:
         prop["@type"] = property->atType;
       }
 
+      if (property->multipleOf > 0) {
+        prop["multipleOf"] = property->multipleOf;
+      }
+
+      const char **enumVal = property->propertyEnum;
+      bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
+
+      if (hasEnum) {
+        enumVal = property->propertyEnum;
+        JsonArray &propEnum = prop.createNestedArray("enum");
+        while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
+          propEnum.add(*enumVal);
+          enumVal++;
+        }
+      }
+
       prop["href"] = "/things/" + device->id + "/properties/" + property->id;
       property = property->next;
     }
-}
+  }
 };
 
 #endif // neither ESP32 nor ESP8266 defined
