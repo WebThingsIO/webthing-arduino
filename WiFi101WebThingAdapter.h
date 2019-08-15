@@ -452,16 +452,20 @@ private:
         prop["unit"] = property->unit;
       }
 
-      if (item->title != "") {
-        prop["title"] = item->title;
+      if (property->title != "") {
+        prop["title"] = property->title;
       }
 
-      if (item->minimum < item->maximum) {
-        prop["minimum"] = item->minimum;
+      if (property->minimum < property->maximum) {
+        prop["minimum"] = property->minimum;
       }
 
-      if (item->maximum > item->minimum) {
-        prop["maximum"] = item->maximum;
+      if (property->maximum > property->minimum) {
+        prop["maximum"] = property->maximum;
+      }
+
+      if (property->multipleOf > 0) {
+        prop["multipleOf"] = property->multipleOf;
       }
 
       const char **enumVal = property->propertyEnum;
@@ -479,6 +483,7 @@ private:
       if (property->atType != nullptr) {
         prop["@type"] = property->atType;
       }
+
       prop["href"] = "/things/" + device->id + "/properties/" + property->id;
       property = (ThingProperty*)property->next;
     }

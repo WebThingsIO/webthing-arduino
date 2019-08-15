@@ -42,6 +42,7 @@ public:
   String title = "";
   double minimum = 0;
   double maximum = -1;
+  double multipleOf = -1;
 
   ThingItem(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_):
     id(id_),
