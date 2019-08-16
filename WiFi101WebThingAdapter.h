@@ -452,6 +452,18 @@ private:
         prop["unit"] = property->unit;
       }
 
+      if (item->title != "") {
+        prop["title"] = item->title;
+      }
+
+      if (item->minimum < item->maximum) {
+        prop["minimum"] = item->minimum;
+      }
+
+      if (item->maximum > item->minimum) {
+        prop["maximum"] = item->maximum;
+      }
+
       const char **enumVal = property->propertyEnum;
       bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
 

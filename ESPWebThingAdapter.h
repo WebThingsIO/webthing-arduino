@@ -290,6 +290,18 @@ private:
         prop["unit"] = item->unit;
       }
 
+      if (item->title != "") {
+        prop["title"] = item->title;
+      }
+
+      if (item->minimum < item->maximum) {
+        prop["minimum"] = item->minimum;
+      }
+
+      if (item->maximum > item->minimum) {
+        prop["maximum"] = item->maximum;
+      }
+
       if (isProp) {
         ThingProperty* property = (ThingProperty*)item;
         const char **enumVal = property->propertyEnum;
