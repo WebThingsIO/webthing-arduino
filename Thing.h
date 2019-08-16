@@ -40,8 +40,8 @@ public:
   bool readOnly = false;
   String unit = "";
   String title = "";
-  double minimum;
-  double maximum;
+  double minimum = 0;
+  double maximum = -1;
 
   ThingItem(const char* id_, const char* description_, ThingPropertyType type_, const char* atType_):
     id(id_),
