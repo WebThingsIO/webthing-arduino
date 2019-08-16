@@ -464,11 +464,33 @@ private:
         prop["type"] = "string";
         break;
       }
+
+      if (property->readOnly) {
+        prop["readOnly"] = true;
+      }
+
+      if (property->unit != "") {
+        prop["unit"] = property->unit;
+      }
+
+      if (property->title != "") {
+        prop["title"] = property->title;
+      }
+
+      if (property->minimum < property->maximum) {
+        prop["minimum"] = property->minimum;
+      }
+
+      if (property->maximum > property->minimum) {
+        prop["maximum"] = property->maximum;
+      }
+
       if (property->atType != nullptr) {
         prop["@type"] = property->atType;
-}
-        prop["href"] = "/things/" + device->id + "/properties/" + property->id;
-        property = property->next;
+      }
+
+      prop["href"] = "/things/" + device->id + "/properties/" + property->id;
+      property = property->next;
     }
 }
 };
