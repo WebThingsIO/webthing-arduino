@@ -7,7 +7,7 @@
 #}
 
 FROM i386/debian:9
-MAINTAINER Philippe Coval (p.coval@samsung.com)
+LABEL maintainer "Philippe Coval (p.coval@samsung.com)"
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV LC_ALL en_US.UTF-8
@@ -36,14 +36,14 @@ RUN echo "#log: ${project}: Setup system" \
   && apt-get clean \
   && sync
 
-ADD Makefile /usr/local/opt/${project}/src/${project}/Makefile
+COPY Makefile /usr/local/opt/${project}/src/${project}/Makefile
 WORKDIR /usr/local/opt/${project}/src/${project}
 RUN echo "#log: ${project}: Preparing sources" \
   && set -x \
   && make rule/setup \
   && sync
 
-ADD . /usr/local/opt/${project}/src/${project}
+COPY . /usr/local/opt/${project}/src/${project}
 RUN echo "#log: ${project}: Preparing sources" \
   && set -x \
   && make rule/all \
