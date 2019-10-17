@@ -196,26 +196,25 @@ private:
     // spec. For now each Thing stores its own Websocket connection object therefore.
 
     // Parse request
-    DynamicJsonDocument newBuffer(1024);
-    auto error = deserializeJson(newBuffer, rawData);
+    DynamicJsonDocument newProp(1024);
+    auto error = deserializeJson(newProp, rawData);
     if (error) {
-      sendErrorMsg(newBuffer, *client, 400, "Invalid json");
+      sendErrorMsg(newProp, *client, 400, "Invalid json");
       return;
     }
-    JsonObject newProp = newBuffer.to<JsonObject>();
 
     String messageType = newProp["messageType"].as<String>();
-    const JsonVariant dataVariant = newProp["data"];
+    JsonVariant dataVariant = newProp["data"];
     if (!dataVariant.is<JsonObject>()) {
-      sendErrorMsg(newBuffer, *client, 400, "data must be an object");
+      sendErrorMsg(newProp, *client, 400, "data must be an object");
       return;
     }
 
-    const JsonObject data = dataVariant.as<const JsonObject>();
+    JsonObject data = dataVariant.as<JsonObject>();
 
     if (messageType == "setProperty") {
       for (auto kv : data) {
-        ThingProperty* property = device->findProperty(kv.key);
+        ThingProperty* property = device->findProperty(kv.key().c_str());
         if (property) {
           setThingProperty(data, property);
         }
@@ -226,7 +225,7 @@ private:
       serializeJson(data, jsonStr);
       client->text(jsonStr.c_str(), jsonStr.length());
     } else if (messageType == "requestAction") {
-      sendErrorMsg(newBuffer, *client, 400, "Not supported yet");
+      sendErrorMsg(newProp, *client, 400, "Not supported yet");
     } else if (messageType == "addEventSubscription") {
       // We report back all property state changes. We'd require a map
       // of subscribed properties per websocket connection otherwise
@@ -390,7 +389,8 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonDocument descr(1024);
+    DynamicJsonDocument buf(1024);
+    JsonObject descr = buf.to<JsonObject>();
     this->serializeDevice(descr, device);
 
     serializeJson(descr, *response);
@@ -419,7 +419,8 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonDocument prop(256);
+    DynamicJsonDocument doc(256);
+    JsonObject prop = doc.to<JsonObject>();
     serializeThingItem(item, prop);
     serializeJson(prop, *response);
     request->send(response);
@@ -428,7 +429,8 @@ private:
   void handleThingGetAll(AsyncWebServerRequest *request, ThingDevice* device, ThingItem* rootItem) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonDocument prop(256);
+    DynamicJsonDocument doc(256);
+    JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
       serializeThingItem(item, prop);
