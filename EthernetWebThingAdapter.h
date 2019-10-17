@@ -352,8 +352,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument buf(256);
-    JsonObject descr = buf.createObject();
+    DynamicJsonDocument descr(256);
     serializeDevice(descr, device);
 
     serializeJson(descr, client);
@@ -365,8 +364,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument buf(256);
-    JsonObject prop = buf.createObject();
+    DynamicJsonDocument prop(256);
     switch (property->type) {
     case BOOLEAN:
       prop[property->id] = property->getValue().boolean;
