@@ -28,9 +28,8 @@ Install the WiFi101 library from the Arduino library manager.
 
 ### Continuing onwards
 
-Make sure to install the ArduinoJson library if you don't have it installed
-already. Note that you must select ArduinoJson version 5, not the prerelease
-beta version 6.
+Make sure to install the current release of the ArduinoJson library (6) if you
+don't have it installed already.
 
 ![ArduinoJson install process](https://github.com/mozilla-iot/webthing-arduino/raw/master/docs/arduinojson.png)
 
