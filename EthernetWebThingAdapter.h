@@ -332,11 +332,11 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonBuffer buf;
-    JsonArray& things = buf.createArray();
+    DynamicJsonDocument buf;
+    JsonArray things = buf.createArray();
     ThingDevice* device = firstDevice;
     while (device != nullptr) {
-      JsonObject& descr = things.createNestedObject();
+      JsonObject descr = things.createNestedObject();
       serializeDevice(descr, device);
       descr["href"] = "/things/" + device->id;
       device = device->next;
@@ -352,8 +352,8 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonBuffer buf;
-    JsonObject& descr = buf.createObject();
+    DynamicJsonDocument buf;
+    JsonObject descr = buf.createObject();
     serializeDevice(descr, device);
 
     descr.printTo(client);
@@ -365,8 +365,8 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonBuffer buf;
-    JsonObject& prop = buf.createObject();
+    DynamicJsonDocument buf;
+    JsonObject prop = buf.createObject();
     switch (property->type) {
     case BOOLEAN:
       prop[property->id] = property->getValue().boolean;
@@ -386,8 +386,9 @@ private:
   void handlePropertyPut(ThingProperty* property) {
     sendOk();
     sendHeaders();
-    DynamicJsonBuffer newBuffer;
-    JsonObject& newProp = newBuffer.parseObject(content);
+    DynamicJsonDocument newBuffer;
+    deserializeJson(newBuffer, content);
+    JsonObject newProp = newBuffer.to<JsonObject>();
     JsonVariant newValue = newProp[property->id];
 
     switch (property->type) {
@@ -431,28 +432,28 @@ private:
     retries = 0;
   }
 
-  void serializeDevice(JsonObject& descr, ThingDevice* device) {
+  void serializeDevice(JsonObject descr, ThingDevice* device) {
     descr["id"] = device->id;
     descr["title"] = device->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
     // TODO: descr["base"] = ???
 
-    JsonObject& securityDefinitions = descr.createNestedObject("securityDefinitions");
-    JsonObject& nosecSc = securityDefinitions.createNestedObject("nosec_sc");
+    JsonObject securityDefinitions = descr.createNestedObject("securityDefinitions");
+    JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
 
-    JsonArray& typeJson = descr.createNestedArray("@type");
+    JsonArray typeJson = descr.createNestedArray("@type");
     const char** type = device->type;
     while ((*type) != nullptr) {
       typeJson.add(*type);
       type++;
     }
 
-    JsonObject& props = descr.createNestedObject("properties");
+    JsonObject props = descr.createNestedObject("properties");
 
     ThingProperty* property = device->firstProperty;
     while (property != nullptr) {
-      JsonObject& prop = props.createNestedObject(property->id);
+      JsonObject prop = props.createNestedObject(property->id);
       switch (property->type) {
       case BOOLEAN:
         prop["type"] = "boolean";
@@ -498,7 +499,7 @@ private:
 
       if (hasEnum) {
         enumVal = property->propertyEnum;
-        JsonArray &propEnum = prop.createNestedArray("enum");
+        JsonArray propEnum = prop.createNestedArray("enum");
         while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
           propEnum.add(*enumVal);
           enumVal++;

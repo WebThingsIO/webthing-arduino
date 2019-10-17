@@ -85,10 +85,10 @@ public:
 #ifndef WITHOUT_WS
   void sendChangedPropsOrEvents(ThingDevice* device, const char* type, ThingItem* rootItem) {
     // Prepare one buffer per device
-    DynamicJsonBuffer buf(1024);
-    JsonObject& message = buf.createObject();
+    DynamicJsonDocument buf(1024);
+    JsonObject message = buf.createObject();
     message["messageType"] = type;
-    JsonObject& prop = message.createNestedObject("data");
+    JsonObject prop = message.createNestedObject("data");
     bool dataToSend = false;
     ThingItem* item = rootItem;
     while (item != nullptr) {
@@ -173,8 +173,8 @@ private:
   }
 
   #ifndef WITHOUT_WS
-  void sendErrorMsg(DynamicJsonBuffer &buffer, AsyncWebSocketClient& client, int status, const char* msg) {
-      JsonObject& prop = buffer.createObject();
+  void sendErrorMsg(DynamicJsonDocument &buffer, AsyncWebSocketClient& client, int status, const char* msg) {
+      JsonObject prop = buffer.createObject();
       prop["error"] = msg;
       prop["status"] = status;
       String jsonStr;
@@ -198,21 +198,22 @@ private:
     // spec. For now each Thing stores its own Websocket connection object therefore.
 
     // Parse request
-    DynamicJsonBuffer newBuffer(1024);
-    JsonObject& newProp = newBuffer.parseObject(rawData);
-    if (!newProp.success()) {
+    DynamicJsonDocument newBuffer(1024);
+    auto error = deserializeJson(newBuffer, rawData);
+    if (error) {
       sendErrorMsg(newBuffer, *client, 400, "Invalid json");
       return;
     }
+    JsonObject newProp = newBuffer.to<JsonObject>();
 
     String messageType = newProp["messageType"].as<String>();
-    const JsonVariant& dataVariant = newProp["data"];
+    const JsonVariant dataVariant = newProp["data"];
     if (!dataVariant.is<JsonObject>()) {
       sendErrorMsg(newBuffer, *client, 400, "data must be an object");
       return;
     }
 
-    const JsonObject &data = dataVariant.as<const JsonObject&>();
+    const JsonObject data = dataVariant.as<const JsonObject>();
 
     if (messageType == "setProperty") {
       for (auto kv : data) {
@@ -248,11 +249,11 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonBuffer buf(1024);
-    JsonArray& things = buf.createArray();
+    DynamicJsonDocument buf(1024);
+    JsonArray things = buf.createArray();
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
-      JsonObject& descr = things.createNestedObject();
+      JsonObject descr = things.createNestedObject();
       this->serializeDevice(descr, device);
       descr["href"] = "/things/" + device->id;
       device = device->next;
@@ -263,11 +264,11 @@ private:
 
   }
 
-  void serializePropertyOrEvent(JsonObject& descr, ThingDevice* device, const char* type, bool isProp, ThingItem* item) {
+  void serializePropertyOrEvent(JsonObject descr, ThingDevice* device, const char* type, bool isProp, ThingItem* item) {
     String basePath = "/things/" + device->id + "/"+ type + "/";
-    JsonObject& props = descr.createNestedObject(type);
+    JsonObject props = descr.createNestedObject(type);
     while (item != nullptr) {
-      JsonObject& prop = props.createNestedObject(item->id);
+      JsonObject prop = props.createNestedObject(item->id);
       switch (item->type) {
       case NO_STATE:
         break;
@@ -313,7 +314,7 @@ private:
 
         if (hasEnum) {
           enumVal = property->propertyEnum;
-          JsonArray &propEnum = prop.createNestedArray("enum");
+          JsonArray propEnum = prop.createNestedArray("enum");
           while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
             propEnum.add(*enumVal);
             enumVal++;
@@ -326,47 +327,47 @@ private:
       }
 
       // 2.9 Property object: A links array (An array of Link objects linking to one or more representations of a Property resource, each with an implied default rel=property.)
-      JsonArray& inline_links = prop.createNestedArray("links");
-      JsonObject& inline_links_prop = inline_links.createNestedObject();
+      JsonArray inline_links = prop.createNestedArray("links");
+      JsonObject inline_links_prop = inline_links.createNestedObject();
       inline_links_prop["href"] = basePath + item->id;
 
       item = item->next;
     }
   }
 
-  void serializeDevice(JsonObject& descr, ThingDevice* device) {
+  void serializeDevice(JsonObject descr, ThingDevice* device) {
     descr["id"] = device->id;
     descr["title"] = device->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
     // TODO: descr["base"] = ???
 
-    JsonObject& securityDefinitions = descr.createNestedObject("securityDefinitions");
-    JsonObject& nosecSc = securityDefinitions.createNestedObject("nosec_sc");
+    JsonObject securityDefinitions = descr.createNestedObject("securityDefinitions");
+    JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
 
-    JsonArray& typeJson = descr.createNestedArray("@type");
+    JsonArray typeJson = descr.createNestedArray("@type");
     const char** type = device->type;
     while ((*type) != nullptr) {
       typeJson.add(*type);
       type++;
     }
 
-    JsonArray& links = descr.createNestedArray("links");
+    JsonArray links = descr.createNestedArray("links");
     {
-      JsonObject& links_prop = links.createNestedObject();
+      JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "properties";
       links_prop["href"] = "/things/" + device->id + "/properties";
     }
 
     {
-      JsonObject& links_prop = links.createNestedObject();
+      JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "events";
       links_prop["href"] = "/things/" + device->id + "/events";
     }
 
 #ifndef WITHOUT_WS
     {
-      JsonObject& links_prop = links.createNestedObject();
+      JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "alternate";
       char buffer [33];
       itoa(port, buffer, 10);
@@ -391,15 +392,15 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonBuffer buf(1024);
-    JsonObject& descr = buf.createObject();
+    DynamicJsonDocument buf(1024);
+    JsonObject descr = buf.createObject();
     this->serializeDevice(descr, device);
 
     descr.printTo(*response);
     request->send(response);
   }
 
-  void serializeThingItem(ThingItem* item, JsonObject& prop) {
+  void serializeThingItem(ThingItem* item, JsonObject prop) {
     switch (item->type) {
     case NO_STATE:
       break;
@@ -421,8 +422,8 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonBuffer buf(256);
-    JsonObject& prop = buf.createObject();
+    DynamicJsonDocument buf(256);
+    JsonObject prop = buf.createObject();
     serializeThingItem(item, prop);
     prop.printTo(*response);
     request->send(response);
@@ -431,8 +432,8 @@ private:
   void handleThingGetAll(AsyncWebServerRequest *request, ThingDevice* device, ThingItem* rootItem) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonBuffer buf(256);
-    JsonObject& prop = buf.createObject();
+    DynamicJsonDocument buf(256);
+    JsonObject prop = buf.createObject();
     ThingItem *item = rootItem;
     while (item != nullptr) {
       serializeThingItem(item, prop);
@@ -451,7 +452,7 @@ private:
     b_has_body_data = true;
   }
 
-  void setThingProperty(const JsonObject& newProp, ThingProperty* property) {
+  void setThingProperty(const JsonObject newProp, ThingProperty* property) {
     const JsonVariant newValue = newProp[property->id];
 
     switch (property->type) {
@@ -485,14 +486,15 @@ private:
       return;
     }
 
-    DynamicJsonBuffer newBuffer(256);
-    JsonObject& newProp = newBuffer.parseObject(body_data);
-    if (!newProp.success()) { // unable to parse json
+    DynamicJsonDocument newBuffer(256);
+    auto error = deserializeJson(newBuffer, body_data);
+    if (error) { // unable to parse json
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       request->send(500);
       return;
     }
+    JsonObject newProp = newBuffer.to<JsonObject>();
 
     setThingProperty(newProp, property);
 
