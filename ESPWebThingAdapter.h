@@ -85,8 +85,7 @@ public:
 #ifndef WITHOUT_WS
   void sendChangedPropsOrEvents(ThingDevice* device, const char* type, ThingItem* rootItem) {
     // Prepare one buffer per device
-    DynamicJsonDocument buf(1024);
-    JsonObject message = buf.createObject();
+    DynamicJsonDocument message(1024);
     message["messageType"] = type;
     JsonObject prop = message.createNestedObject("data");
     bool dataToSend = false;
@@ -173,8 +172,7 @@ private:
   }
 
   #ifndef WITHOUT_WS
-  void sendErrorMsg(DynamicJsonDocument &buffer, AsyncWebSocketClient& client, int status, const char* msg) {
-      JsonObject prop = buffer.createObject();
+  void sendErrorMsg(DynamicJsonDocument &prop, AsyncWebSocketClient& client, int status, const char* msg) {
       prop["error"] = msg;
       prop["status"] = status;
       String jsonStr;
@@ -392,8 +390,7 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonDocument buf(1024);
-    JsonObject descr = buf.createObject();
+    DynamicJsonDocument descr(1024);
     this->serializeDevice(descr, device);
 
     serializeJson(descr, *response);
@@ -422,8 +419,7 @@ private:
     }
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonDocument buf(256);
-    JsonObject prop = buf.createObject();
+    DynamicJsonDocument prop(256);
     serializeThingItem(item, prop);
     serializeJson(prop, *response);
     request->send(response);
@@ -432,8 +428,7 @@ private:
   void handleThingGetAll(AsyncWebServerRequest *request, ThingDevice* device, ThingItem* rootItem) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonDocument buf(256);
-    JsonObject prop = buf.createObject();
+    DynamicJsonDocument prop(256);
     ThingItem *item = rootItem;
     while (item != nullptr) {
       serializeThingItem(item, prop);
