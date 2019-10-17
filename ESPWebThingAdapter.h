@@ -101,7 +101,7 @@ public:
     }
     if (dataToSend) {
       String jsonStr;
-      message.printTo(jsonStr);
+      serializeJson(message, jsonStr);
       // Inform all connected ws clients of a Thing about changed properties
       ((AsyncWebSocket*)device->ws)->textAll(jsonStr.c_str(), jsonStr.length());
     }
@@ -178,7 +178,7 @@ private:
       prop["error"] = msg;
       prop["status"] = status;
       String jsonStr;
-      prop.printTo(jsonStr);
+      serializeJson(prop, jsonStr);
       client.text(jsonStr.c_str(), jsonStr.length());
   }
 
@@ -225,7 +225,7 @@ private:
 
       // Send confirmation by sending back the received property object
       String jsonStr;
-      data.printTo(jsonStr);
+      serializeJson(data, jsonStr);
       client->text(jsonStr.c_str(), jsonStr.length());
     } else if (messageType == "requestAction") {
       sendErrorMsg(newBuffer, *client, 400, "Not supported yet");
@@ -259,7 +259,7 @@ private:
       device = device->next;
     }
 
-    things.printTo(*response);
+    serializeJson(things, *response);
     request->send(response);
 
   }
@@ -396,7 +396,7 @@ private:
     JsonObject descr = buf.createObject();
     this->serializeDevice(descr, device);
 
-    descr.printTo(*response);
+    serializeJson(descr, *response);
     request->send(response);
   }
 
@@ -425,7 +425,7 @@ private:
     DynamicJsonDocument buf(256);
     JsonObject prop = buf.createObject();
     serializeThingItem(item, prop);
-    prop.printTo(*response);
+    serializeJson(prop, *response);
     request->send(response);
   }
 
@@ -439,7 +439,7 @@ private:
       serializeThingItem(item, prop);
       item = item->next;
     }
-    prop.printTo(*response);
+    serializeJson(prop, *response);
     request->send(response);
   }
 
@@ -499,7 +499,7 @@ private:
     setThingProperty(newProp, property);
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    newProp.printTo(*response);
+    serializeJson(newProp, *response);
     request->send(response);
 
     b_has_body_data = false;

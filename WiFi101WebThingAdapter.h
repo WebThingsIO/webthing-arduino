@@ -315,7 +315,7 @@ private:
       device = device->next;
     }
 
-    things.printTo(client);
+    serializeJson(things, client);
     delay(1);
     client.stop();
   }
@@ -329,7 +329,7 @@ private:
     JsonObject descr = buf.createObject();
     serializeDevice(descr, device);
 
-    descr.printTo(client);
+    serializeJson(descr, client);
     delay(1);
     client.stop();
   }
@@ -353,7 +353,7 @@ private:
       prop[property->id] = *property->getValue().string;
       break;
     }
-    prop.printTo(client);
+    serializeJson(prop, client);
     delay(1);
     client.stop();
   }
