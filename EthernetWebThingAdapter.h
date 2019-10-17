@@ -332,7 +332,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument buf;
+    DynamicJsonDocument buf(256);
     JsonArray things = buf.createArray();
     ThingDevice* device = firstDevice;
     while (device != nullptr) {
@@ -352,7 +352,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument buf;
+    DynamicJsonDocument buf(256);
     JsonObject descr = buf.createObject();
     serializeDevice(descr, device);
 
@@ -365,7 +365,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument buf;
+    DynamicJsonDocument buf(256);
     JsonObject prop = buf.createObject();
     switch (property->type) {
     case BOOLEAN:
@@ -386,7 +386,7 @@ private:
   void handlePropertyPut(ThingProperty* property) {
     sendOk();
     sendHeaders();
-    DynamicJsonDocument newBuffer;
+    DynamicJsonDocument newBuffer(256);
     deserializeJson(newBuffer, content);
     JsonObject newProp = newBuffer.to<JsonObject>();
     JsonVariant newValue = newProp[property->id];
