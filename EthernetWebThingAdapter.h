@@ -333,7 +333,7 @@ private:
     sendHeaders();
 
     DynamicJsonDocument buf(256);
-    JsonArray things = buf.createArray();
+    JsonArray things = buf.to<JsonArray>();
     ThingDevice* device = firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
