@@ -248,7 +248,7 @@ private:
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
     DynamicJsonDocument buf(1024);
-    JsonArray things = buf.createArray();
+    JsonArray things = buf.to<JsonArray>();
     ThingDevice* device = this->firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();

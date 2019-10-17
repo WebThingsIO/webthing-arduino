@@ -306,7 +306,7 @@ private:
     sendHeaders();
 
     DynamicJsonDocument buf(256);
-    JsonArray things = buf.createArray();
+    JsonArray things = buf.to<JsonArray>();
     ThingDevice* device = firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
@@ -325,7 +325,8 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument descr(256);
+    DynamicJsonDocument buf(256);
+    JsonObject descr = buf.to<JsonObject>();
     serializeDevice(descr, device);
 
     serializeJson(descr, client);
