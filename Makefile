@@ -44,7 +44,7 @@ USER_LIB_PATH?=${extra_dir}/Arduino/libraries
 
 ArduinoJson_url?=https://github.com/bblanchon/ArduinoJson
 ArduinoJson_dir?=${extra_dir}/Arduino/libraries/ArduinoJson
-ArduinoJson_version?=v5.13.4
+ArduinoJson_version?=v6.12.0
 arduino_lib_dirs+=${ArduinoJson_dir}
 
 ${ArduinoJson_dir}:
