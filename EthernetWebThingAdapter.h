@@ -352,7 +352,8 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument descr(256);
+    DynamicJsonDocument buf(256);
+    JsonObject descr = buf.to<JsonObject>();
     serializeDevice(descr, device);
 
     serializeJson(descr, client);
