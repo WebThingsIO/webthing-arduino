@@ -307,7 +307,7 @@ private:
               }
               return;
             }
-            property = property->next;
+            property = (ThingProperty*)property->next;
           }
         }
       }
@@ -506,7 +506,7 @@ private:
       }
 
       prop["href"] = "/things/" + device->id + "/properties/" + property->id;
-      property = property->next;
+      property = (ThingProperty*)property->next;
     }
   }
 };
