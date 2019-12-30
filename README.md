@@ -22,9 +22,10 @@ You will also need to download the [ESP Async
 WebServer](https://github.com/me-no-dev/ESPAsyncWebServer/) library and unpack
 it in your sketchbook's libraries folder.
 
-### WiFi101
+### MKR1000 or MKR1010
 
-Install the WiFi101 library from the Arduino library manager.
+* MKR1000: Install the WiFi101 library from the Arduino library manager.
+* MKR1010: Install the WiFiNINA library from the Arduino library manager.
 
 ### Continuing onwards
 

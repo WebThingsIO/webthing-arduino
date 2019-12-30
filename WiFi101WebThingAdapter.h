@@ -14,7 +14,11 @@
 #if !defined(ESP32) && !defined(ESP8266)
 
 #include <Arduino.h>
+#if defined(ARDUINO_SAMD_MKRWIFI1010)
+#include <WiFiNINA.h>
+#else
 #include <WiFi101.h>
+#endif
 #include <WiFiUdp.h>
 #include <ArduinoMDNS.h>
 #include <ArduinoJson.h>
