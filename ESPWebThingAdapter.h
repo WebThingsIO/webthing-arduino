@@ -491,7 +491,7 @@ private:
       request->send(500);
       return;
     }
-    JsonObject newProp = newBuffer.to<JsonObject>();
+    JsonObject newProp = newBuffer.as<JsonObject>();
 
     setThingProperty(newProp, property);
 

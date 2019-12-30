@@ -387,7 +387,7 @@ private:
     sendHeaders();
     DynamicJsonDocument newBuffer(256);
     deserializeJson(newBuffer, content);
-    JsonObject newProp = newBuffer.to<JsonObject>();
+    JsonObject newProp = newBuffer.as<JsonObject>();
     JsonVariant newValue = newProp[property->id];
 
     switch (property->type) {
