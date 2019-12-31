@@ -20,12 +20,14 @@ enum ThingPropertyType {
   NO_STATE,
   BOOLEAN,
   NUMBER,
+  INTEGER,
   STRING
 };
 
 union ThingPropertyValue {
   bool boolean;
   double number;
+  signed long long integer;
   String* string;
 };
 
@@ -90,6 +92,7 @@ class ThingDevice {
 public:
   String id;
   String title;
+  String description;
   const char** type;
   #if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
   AsyncWebSocket* ws = nullptr;

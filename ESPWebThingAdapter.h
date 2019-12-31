@@ -102,7 +102,7 @@ public:
       String jsonStr;
       serializeJson(message, jsonStr);
       // Inform all connected ws clients of a Thing about changed properties
-      ((AsyncWebSocket*)device->ws)->textAll(jsonStr.c_str(), jsonStr.length());
+      ((AsyncWebSocket*)device->ws)->textAll(jsonStr);
     }
   }
 #endif
@@ -219,11 +219,6 @@ private:
           setThingProperty(data, property);
         }
       }
-
-      // Send confirmation by sending back the received property object
-      String jsonStr;
-      serializeJson(data, jsonStr);
-      client->text(jsonStr.c_str(), jsonStr.length());
     } else if (messageType == "requestAction") {
       sendErrorMsg(newProp, *client, 400, "Not supported yet");
     } else if (messageType == "addEventSubscription") {
@@ -275,6 +270,9 @@ private:
       case NUMBER:
         prop["type"] = "number";
         break;
+      case INTEGER:
+        prop["type"] = "integer";
+        break;
       case STRING:
         prop["type"] = "string";
         break;
@@ -290,6 +288,10 @@ private:
 
       if (item->title != "") {
         prop["title"] = item->title;
+      }
+
+      if (item->description != "") {
+        prop["description"] = item->description;
       }
 
       if (item->minimum < item->maximum) {
@@ -336,11 +338,16 @@ private:
     descr["id"] = device->id;
     descr["title"] = device->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
+    
+    if (device->description != "") {
+      descr["description"] = device->description;
+    }
     // TODO: descr["base"] = ???
 
     JsonObject securityDefinitions = descr.createNestedObject("securityDefinitions");
     JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
+    descr["security"] = "nosec_sc";
 
     JsonArray typeJson = descr.createNestedArray("@type");
     const char** type = device->type;
@@ -407,6 +414,9 @@ private:
     case NUMBER:
       prop[item->id] = item->getValue().number;
       break;
+    case INTEGER:
+      prop[item->id] = item->getValue().integer;
+      break;
     case STRING:
       prop[item->id] = *item->getValue().string;
       break;
@@ -465,6 +475,12 @@ private:
     case NUMBER: {
       ThingPropertyValue value;
       value.number = newValue.as<double>();
+      property->setValue(value);
+      break;
+    }
+    case INTEGER: {
+      ThingPropertyValue value;
+      value.integer = newValue.as<signed long long>();
       property->setValue(value);
       break;
     }
