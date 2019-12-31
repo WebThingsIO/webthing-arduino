@@ -157,42 +157,42 @@ public:
       break;
 
     case STATE_DISCARD_HTTP11:
-        if (c == '\r') {
-          state = STATE_DISCARD_HEADERS_PRE_HOST;
-        }
-        break;
-
-      case STATE_DISCARD_HEADERS_PRE_HOST:
-        if (c == '\r') {
-          break;
-        }
-        if (c == '\n') {
-          headerRaw = "";
-          break;
-        }
-        if (c == ':') {
-          if (headerRaw.equalsIgnoreCase("Host")) {
-            state = STATE_READ_HOST;
-          }
-          break;
-        }
-
-        headerRaw += c;
-        break;
-
-      case STATE_READ_HOST:
-        if (c == '\r') {
-          returnsAndNewlines = 1;
-          state = STATE_DISCARD_HEADERS_POST_HOST;
-          break;
-        }
-      if (c == ' ') {
-          break;
+      if (c == '\r') {
+        state = STATE_DISCARD_HEADERS_PRE_HOST;
       }
-        host += c;
       break;
 
-      case STATE_DISCARD_HEADERS_POST_HOST:
+    case STATE_DISCARD_HEADERS_PRE_HOST:
+      if (c == '\r') {
+        break;
+      }
+      if (c == '\n') {
+        headerRaw = "";
+        break;
+      }
+      if (c == ':') {
+        if (headerRaw.equalsIgnoreCase("Host")) {
+          state = STATE_READ_HOST;
+        }
+        break;
+      }
+
+      headerRaw += c;
+      break;
+
+    case STATE_READ_HOST:
+      if (c == '\r') {
+        returnsAndNewlines = 1;
+        state = STATE_DISCARD_HEADERS_POST_HOST;
+        break;
+      }
+      if (c == ' ') {
+        break;
+      }
+      host += c;
+      break;
+
+    case STATE_DISCARD_HEADERS_POST_HOST:
       if (c == '\r' || c == '\n') {
         returnsAndNewlines += 1;
       } else {
