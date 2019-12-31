@@ -29,12 +29,7 @@
 
 static const bool DEBUG = false;
 
-enum HTTPMethod {
-  HTTP_ANY,
-  HTTP_GET,
-  HTTP_PUT,
-  HTTP_OPTIONS
-};
+enum HTTPMethod { HTTP_ANY, HTTP_GET, HTTP_PUT, HTTP_OPTIONS };
 
 enum ReadState {
   STATE_READ_METHOD,
@@ -48,7 +43,8 @@ enum ReadState {
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, uint32_t _ip, uint16_t _port = 80): name(_name), port(_port), server(_port), mdns(udp) {
+  WebThingAdapter(String _name, uint32_t _ip, uint16_t _port = 80)
+      : name(_name), port(_port), server(_port), mdns(udp) {
     ip = "";
     for (int i = 0; i < 4; i++) {
       ip += _ip & 0xff;
@@ -64,10 +60,7 @@ public:
 
     mdns.begin(WiFi.localIP(), name.c_str());
 
-    mdns.addServiceRecord("_webthing",
-                          port,
-                          MDNSServiceTCP,
-                          "\x06path=/");
+    mdns.addServiceRecord("_webthing", port, MDNSServiceTCP, "\x06path=/");
 
     server.begin();
   }
@@ -113,7 +106,7 @@ public:
       return;
     }
 
-    switch(state) {
+    switch (state) {
     case STATE_READ_METHOD:
       if (c == ' ') {
         if (methodRaw == "GET") {
@@ -192,7 +185,7 @@ public:
     }
   }
 
-  void addDevice(ThingDevice* device) {
+  void addDevice(ThingDevice *device) {
     if (this->lastDevice == nullptr) {
       this->firstDevice = device;
       this->lastDevice = device;
@@ -201,6 +194,7 @@ public:
       this->lastDevice = device;
     }
   }
+
 private:
   String name, ip;
   uint16_t port;
@@ -262,7 +256,7 @@ private:
       return;
     }
 
-    ThingDevice* device = this->firstDevice;
+    ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       String deviceBase = "/things/" + device->id;
 
@@ -279,7 +273,7 @@ private:
         } else if (uri == deviceBase + "/events") {
           handleThingGetAll(device->firstEvent);
         } else {
-          ThingProperty* property = device->firstProperty;
+          ThingProperty *property = device->firstProperty;
           while (property != nullptr) {
             String propertyBase = deviceBase + "/properties/" + property->id;
             if (uri == propertyBase) {
@@ -292,7 +286,7 @@ private:
               }
               return;
             }
-            property = (ThingProperty*)property->next;
+            property = (ThingProperty *)property->next;
           }
         }
       }
@@ -301,9 +295,7 @@ private:
     handleError();
   }
 
-  void sendOk() {
-    client.println("HTTP/1.1 200 OK");
-  }
+  void sendOk() { client.println("HTTP/1.1 200 OK"); }
 
   void sendHeaders() {
     client.println("Access-Control-Allow-Origin: *");
@@ -319,7 +311,7 @@ private:
 
     DynamicJsonDocument buf(1024);
     JsonArray things = buf.to<JsonArray>();
-    ThingDevice* device = this->firstDevice;
+    ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
       this->serializeDevice(descr, device);
@@ -332,8 +324,10 @@ private:
     client.stop();
   }
 
-  void serializePropertyOrEvent(JsonObject descr, ThingDevice* device, const char* type, bool isProp, ThingItem* item) {
-    String basePath = "/things/" + device->id + "/"+ type + "/";
+  void serializePropertyOrEvent(JsonObject descr, ThingDevice *device,
+                                const char *type, bool isProp,
+                                ThingItem *item) {
+    String basePath = "/things/" + device->id + "/" + type + "/";
     JsonObject props = descr.createNestedObject(type);
     while (item != nullptr) {
       JsonObject prop = props.createNestedObject(item->id);
@@ -383,14 +377,15 @@ private:
       }
 
       if (isProp) {
-        ThingProperty* property = (ThingProperty*)item;
+        ThingProperty *property = (ThingProperty *)item;
         const char **enumVal = property->propertyEnum;
-        bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
+        bool hasEnum = (property->propertyEnum != nullptr) &&
+                       ((*property->propertyEnum) != nullptr);
 
         if (hasEnum) {
           enumVal = property->propertyEnum;
           JsonArray propEnum = prop.createNestedArray("enum");
-          while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
+          while (property->propertyEnum != nullptr && (*enumVal) != nullptr) {
             propEnum.add(*enumVal);
             enumVal++;
           }
@@ -401,7 +396,9 @@ private:
         prop["@type"] = item->atType;
       }
 
-      // 2.9 Property object: A links array (An array of Link objects linking to one or more representations of a Property resource, each with an implied default rel=property.)
+      // 2.9 Property object: A links array (An array of Link objects linking
+      // to one or more representations of a Property resource, each with an
+      // implied default rel=property.)
       JsonArray inline_links = prop.createNestedArray("links");
       JsonObject inline_links_prop = inline_links.createNestedObject();
       inline_links_prop["href"] = basePath + item->id;
@@ -410,7 +407,7 @@ private:
     }
   }
 
-  void serializeDevice(JsonObject descr, ThingDevice* device) {
+  void serializeDevice(JsonObject descr, ThingDevice *device) {
     descr["id"] = device->id;
     descr["title"] = device->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
@@ -420,13 +417,14 @@ private:
     }
     // TODO: descr["base"] = ???
 
-    JsonObject securityDefinitions = descr.createNestedObject("securityDefinitions");
+    JsonObject securityDefinitions =
+        descr.createNestedObject("securityDefinitions");
     JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
     descr["security"] = "nosec_sc";
 
     JsonArray typeJson = descr.createNestedArray("@type");
-    const char** type = device->type;
+    const char **type = device->type;
     while ((*type) != nullptr) {
       typeJson.add(*type);
       type++;
@@ -445,18 +443,18 @@ private:
       links_prop["href"] = "/things/" + device->id + "/events";
     }
 
-    ThingProperty* property = device->firstProperty;
+    ThingProperty *property = device->firstProperty;
     if (property) {
       serializePropertyOrEvent(descr, device, "properties", true, property);
     }
 
-    ThingEvent* event = device->firstEvent;
+    ThingEvent *event = device->firstEvent;
     if (event) {
       serializePropertyOrEvent(descr, device, "events", false, event);
     }
   }
 
-  void handleThing(ThingDevice* device) {
+  void handleThing(ThingDevice *device) {
     sendOk();
     sendHeaders();
 
@@ -469,7 +467,7 @@ private:
     client.stop();
   }
 
-  void serializeThingItem(ThingItem* item, JsonObject prop) {
+  void serializeThingItem(ThingItem *item, JsonObject prop) {
     switch (item->type) {
     case NO_STATE:
       break;
@@ -488,7 +486,7 @@ private:
     }
   }
 
-  void handleThingGetItem(ThingItem* item) {
+  void handleThingGetItem(ThingItem *item) {
     sendOk();
     sendHeaders();
 
@@ -500,7 +498,7 @@ private:
     client.stop();
   }
 
-  void handleThingGetAll(ThingItem* rootItem) {
+  void handleThingGetAll(ThingItem *rootItem) {
     sendOk();
     sendHeaders();
 
@@ -516,7 +514,7 @@ private:
     client.stop();
   }
 
-  void setThingProperty(const JsonObject newProp, ThingProperty* property) {
+  void setThingProperty(const JsonObject newProp, ThingProperty *property) {
     const JsonVariant newValue = newProp[property->id];
 
     switch (property->type) {
@@ -547,7 +545,7 @@ private:
     }
   }
 
-  void handleThingPropertyPut(ThingProperty* property) {
+  void handleThingPropertyPut(ThingProperty *property) {
     sendOk();
     sendHeaders();
     DynamicJsonDocument newBuffer(256);
@@ -582,7 +580,6 @@ private:
     content = "";
     retries = 0;
   }
-
 };
 
 #endif // neither ESP32 nor ESP8266 defined

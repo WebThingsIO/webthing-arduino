@@ -28,8 +28,8 @@
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80): server(_port), name(_name), ip(_ip.toString()), port(_port) {
-  }
+  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80)
+      : server(_port), name(_name), ip(_ip.toString()), port(_port) {}
 
   void begin() {
     name.toLowerCase();
@@ -41,57 +41,74 @@ public:
     MDNS.addServiceTxt("webthing", "tcp", "path", "/");
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods", "PUT, GET, OPTIONS");
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods",
+                                         "PUT, GET, OPTIONS");
 
-    this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this, std::placeholders::_1));
+    this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this,
+                                      std::placeholders::_1));
 
-    this->server.on("/", HTTP_GET, std::bind(&WebThingAdapter::handleThings, this, std::placeholders::_1));
+    this->server.on("/", HTTP_GET,
+                    std::bind(&WebThingAdapter::handleThings, this,
+                              std::placeholders::_1));
 
-    ThingDevice* device = this->firstDevice;
+    ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       String deviceBase = "/things/" + device->id;
 
-      ThingProperty* property = device->firstProperty;
+      ThingProperty *property = device->firstProperty;
       while (property != nullptr) {
         String propertyBase = deviceBase + "/properties/" + property->id;
-        this->server.on(propertyBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetItem, this, std::placeholders::_1, property));
+        this->server.on(propertyBase.c_str(), HTTP_GET,
+                        std::bind(&WebThingAdapter::handleThingGetItem, this,
+                                  std::placeholders::_1, property));
         this->server.on(propertyBase.c_str(), HTTP_PUT,
-          std::bind(&WebThingAdapter::handleThingPropertyPut, this, std::placeholders::_1, property),
-          NULL,
-          std::bind(&WebThingAdapter::handleBody, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5)
-        );
+                        std::bind(&WebThingAdapter::handleThingPropertyPut,
+                                  this, std::placeholders::_1, property),
+                        NULL,
+                        std::bind(&WebThingAdapter::handleBody, this,
+                                  std::placeholders::_1, std::placeholders::_2,
+                                  std::placeholders::_3, std::placeholders::_4,
+                                  std::placeholders::_5));
 
-        property = (ThingProperty*) property->next;
+        property = (ThingProperty *)property->next;
       }
 
-      ThingEvent* event = device->firstEvent;
+      ThingEvent *event = device->firstEvent;
       while (event != nullptr) {
         String eventBase = deviceBase + "/events/" + event->id;
-        this->server.on(eventBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetItem, this, std::placeholders::_1, event));
-        event = (ThingEvent*) event->next;
+        this->server.on(eventBase.c_str(), HTTP_GET,
+                        std::bind(&WebThingAdapter::handleThingGetItem, this,
+                                  std::placeholders::_1, event));
+        event = (ThingEvent *)event->next;
       }
 
-      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device->firstProperty));
-      this->server.on((deviceBase + "/events").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device->firstEvent));
-      this->server.on(deviceBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThing, this, std::placeholders::_1, device));
+      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingGetAll, this,
+                                std::placeholders::_1, device->firstProperty));
+      this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingGetAll, this,
+                                std::placeholders::_1, device->firstEvent));
+      this->server.on(deviceBase.c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThing, this,
+                                std::placeholders::_1, device));
 
       device = device->next;
-
     }
 
     this->server.begin();
   }
 
 #ifndef WITHOUT_WS
-  void sendChangedPropsOrEvents(ThingDevice* device, const char* type, ThingItem* rootItem) {
+  void sendChangedPropsOrEvents(ThingDevice *device, const char *type,
+                                ThingItem *rootItem) {
     // Prepare one buffer per device
     DynamicJsonDocument message(1024);
     message["messageType"] = type;
     JsonObject prop = message.createNestedObject("data");
     bool dataToSend = false;
-    ThingItem* item = rootItem;
+    ThingItem *item = rootItem;
     while (item != nullptr) {
-      ThingPropertyValue* value = item->changedValueOrNull();
+      ThingPropertyValue *value = item->changedValueOrNull();
       if (value) {
         dataToSend = true;
         this->serializeThingItem(item, prop);
@@ -102,7 +119,7 @@ public:
       String jsonStr;
       serializeJson(message, jsonStr);
       // Inform all connected ws clients of a Thing about changed properties
-      ((AsyncWebSocket*)device->ws)->textAll(jsonStr);
+      ((AsyncWebSocket *)device->ws)->textAll(jsonStr);
     }
   }
 #endif
@@ -112,19 +129,20 @@ public:
     MDNS.update();
 #endif
 #ifndef WITHOUT_WS
-  // * Send changed properties as defined in "4.5 propertyStatus message"
-  // * Send events as defined in "4.7 event message"
-  // Do this by looping over all devices and properties/events
-  ThingDevice* device = this->firstDevice;
-  while (device != nullptr) {
-    sendChangedPropsOrEvents(device, "propertyStatus", device->firstProperty);
-    sendChangedPropsOrEvents(device, "event", device->firstEvent);
-    device = device->next;
-  }
+    // * Send changed properties as defined in "4.5 propertyStatus message"
+    // * Send events as defined in "4.7 event message"
+    // Do this by looping over all devices and properties/events
+    ThingDevice *device = this->firstDevice;
+    while (device != nullptr) {
+      sendChangedPropsOrEvents(device, "propertyStatus",
+                               device->firstProperty);
+      sendChangedPropsOrEvents(device, "event", device->firstEvent);
+      device = device->next;
+    }
 #endif
   }
 
-  void addDevice(ThingDevice* device) {
+  void addDevice(ThingDevice *device) {
     if (this->lastDevice == nullptr) {
       this->firstDevice = device;
       this->lastDevice = device;
@@ -132,14 +150,18 @@ public:
       this->lastDevice->next = device;
       this->lastDevice = device;
     }
-    // Initiate the websocket instance
-    #ifndef WITHOUT_WS
-    AsyncWebSocket* ws = new AsyncWebSocket("/things/" + device->id);
+// Initiate the websocket instance
+#ifndef WITHOUT_WS
+    AsyncWebSocket *ws = new AsyncWebSocket("/things/" + device->id);
     device->ws = ws;
-    // AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len, ThingDevice* device
-    ws->onEvent(std::bind(&WebThingAdapter::handleWS, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, device));
+    // AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType
+    // type, void * arg, uint8_t *data, size_t len, ThingDevice* device
+    ws->onEvent(std::bind(
+        &WebThingAdapter::handleWS, this, std::placeholders::_1,
+        std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
+        std::placeholders::_5, std::placeholders::_6, device));
     this->server.addHandler(ws);
-    #endif
+#endif
   }
 
 private:
@@ -148,13 +170,13 @@ private:
   String name;
   String ip;
   uint16_t port;
-  ThingDevice* firstDevice = nullptr;
-  ThingDevice* lastDevice = nullptr;
+  ThingDevice *firstDevice = nullptr;
+  ThingDevice *lastDevice = nullptr;
   char body_data[ESP_MAX_PUT_BODY_SIZE];
   bool b_has_body_data = false;
 
   bool verifyHost(AsyncWebServerRequest *request) {
-    AsyncWebHeader* header = request->getHeader("Host");
+    AsyncWebHeader *header = request->getHeader("Host");
     if (header == nullptr) {
       request->send(403);
       return false;
@@ -171,29 +193,36 @@ private:
     return false;
   }
 
-  #ifndef WITHOUT_WS
-  void sendErrorMsg(DynamicJsonDocument &prop, AsyncWebSocketClient& client, int status, const char* msg) {
-      prop["error"] = msg;
-      prop["status"] = status;
-      String jsonStr;
-      serializeJson(prop, jsonStr);
-      client.text(jsonStr.c_str(), jsonStr.length());
+#ifndef WITHOUT_WS
+  void sendErrorMsg(DynamicJsonDocument &prop, AsyncWebSocketClient &client,
+                    int status, const char *msg) {
+    prop["error"] = msg;
+    prop["status"] = status;
+    String jsonStr;
+    serializeJson(prop, jsonStr);
+    client.text(jsonStr.c_str(), jsonStr.length());
   }
 
-  void handleWS(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *rawData, size_t len, ThingDevice* device) {
+  void handleWS(AsyncWebSocket *server, AsyncWebSocketClient *client,
+                AwsEventType type, void *arg, uint8_t *rawData, size_t len,
+                ThingDevice *device) {
     // Ignore all except data packets
-    if(type != WS_EVT_DATA) return;
+    if (type != WS_EVT_DATA)
+      return;
 
     // Only consider non fragmented data
-    AwsFrameInfo * info = (AwsFrameInfo*)arg;
-    if(!info->final || info->index != 0 || info->len != len) return;
+    AwsFrameInfo *info = (AwsFrameInfo *)arg;
+    if (!info->final || info->index != 0 || info->len != len)
+      return;
 
     // Web Thing only specifies text, not binary websocket transfers
-    if(info->opcode != WS_TEXT) return;
+    if (info->opcode != WS_TEXT)
+      return;
 
-    // In theory we could just have one websocket for all Things and react on the server->url() to route data.
-    // Controllers will however establish a separate websocket connection for each Thing anyway as of in the
-    // spec. For now each Thing stores its own Websocket connection object therefore.
+    // In theory we could just have one websocket for all Things and react on
+    // the server->url() to route data. Controllers will however establish a
+    // separate websocket connection for each Thing anyway as of in the spec.
+    // For now each Thing stores its own Websocket connection object therefore.
 
     // Parse request
     DynamicJsonDocument newProp(1024);
@@ -214,7 +243,7 @@ private:
 
     if (messageType == "setProperty") {
       for (auto kv : data) {
-        ThingProperty* property = device->findProperty(kv.key().c_str());
+        ThingProperty *property = device->findProperty(kv.key().c_str());
         if (property) {
           setThingProperty(data, property);
         }
@@ -226,7 +255,7 @@ private:
       // of subscribed properties per websocket connection otherwise
     }
   }
-  #endif
+#endif
 
   void handleUnknown(AsyncWebServerRequest *request) {
     if (!verifyHost(request)) {
@@ -239,11 +268,12 @@ private:
     if (!verifyHost(request)) {
       return;
     }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
 
     DynamicJsonDocument buf(1024);
     JsonArray things = buf.to<JsonArray>();
-    ThingDevice* device = this->firstDevice;
+    ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
       this->serializeDevice(descr, device);
@@ -253,11 +283,12 @@ private:
 
     serializeJson(things, *response);
     request->send(response);
-
   }
 
-  void serializePropertyOrEvent(JsonObject descr, ThingDevice* device, const char* type, bool isProp, ThingItem* item) {
-    String basePath = "/things/" + device->id + "/"+ type + "/";
+  void serializePropertyOrEvent(JsonObject descr, ThingDevice *device,
+                                const char *type, bool isProp,
+                                ThingItem *item) {
+    String basePath = "/things/" + device->id + "/" + type + "/";
     JsonObject props = descr.createNestedObject(type);
     while (item != nullptr) {
       JsonObject prop = props.createNestedObject(item->id);
@@ -307,14 +338,15 @@ private:
       }
 
       if (isProp) {
-        ThingProperty* property = (ThingProperty*)item;
+        ThingProperty *property = (ThingProperty *)item;
         const char **enumVal = property->propertyEnum;
-        bool hasEnum = (property->propertyEnum != nullptr) && ((*property->propertyEnum) != nullptr);
+        bool hasEnum = (property->propertyEnum != nullptr) &&
+                       ((*property->propertyEnum) != nullptr);
 
         if (hasEnum) {
           enumVal = property->propertyEnum;
           JsonArray propEnum = prop.createNestedArray("enum");
-          while (property->propertyEnum != nullptr && (*enumVal) != nullptr){
+          while (property->propertyEnum != nullptr && (*enumVal) != nullptr) {
             propEnum.add(*enumVal);
             enumVal++;
           }
@@ -325,7 +357,9 @@ private:
         prop["@type"] = item->atType;
       }
 
-      // 2.9 Property object: A links array (An array of Link objects linking to one or more representations of a Property resource, each with an implied default rel=property.)
+      // 2.9 Property object: A links array (An array of Link objects linking
+      // to one or more representations of a Property resource, each with an
+      // implied default rel=property.)
       JsonArray inline_links = prop.createNestedArray("links");
       JsonObject inline_links_prop = inline_links.createNestedObject();
       inline_links_prop["href"] = basePath + item->id;
@@ -334,7 +368,7 @@ private:
     }
   }
 
-  void serializeDevice(JsonObject descr, ThingDevice* device) {
+  void serializeDevice(JsonObject descr, ThingDevice *device) {
     descr["id"] = device->id;
     descr["title"] = device->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
@@ -344,13 +378,14 @@ private:
     }
     // TODO: descr["base"] = ???
 
-    JsonObject securityDefinitions = descr.createNestedObject("securityDefinitions");
+    JsonObject securityDefinitions =
+        descr.createNestedObject("securityDefinitions");
     JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
     descr["security"] = "nosec_sc";
 
     JsonArray typeJson = descr.createNestedArray("@type");
-    const char** type = device->type;
+    const char **type = device->type;
     while ((*type) != nullptr) {
       typeJson.add(*type);
       type++;
@@ -373,28 +408,30 @@ private:
     {
       JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "alternate";
-      char buffer [33];
+      char buffer[33];
       itoa(port, buffer, 10);
-      links_prop["href"] = "ws://" + ip + ":" + buffer + "/things/" + device->id;
+      links_prop["href"] =
+          "ws://" + ip + ":" + buffer + "/things/" + device->id;
     }
 #endif
 
-    ThingProperty* property = device->firstProperty;
+    ThingProperty *property = device->firstProperty;
     if (property) {
       serializePropertyOrEvent(descr, device, "properties", true, property);
     }
 
-    ThingEvent* event = device->firstEvent;
+    ThingEvent *event = device->firstEvent;
     if (event) {
       serializePropertyOrEvent(descr, device, "events", false, event);
     }
   }
 
-  void handleThing(AsyncWebServerRequest *request, ThingDevice*& device) {
+  void handleThing(AsyncWebServerRequest *request, ThingDevice *&device) {
     if (!verifyHost(request)) {
       return;
     }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
 
     DynamicJsonDocument buf(1024);
     JsonObject descr = buf.to<JsonObject>();
@@ -404,7 +441,7 @@ private:
     request->send(response);
   }
 
-  void serializeThingItem(ThingItem* item, JsonObject prop) {
+  void serializeThingItem(ThingItem *item, JsonObject prop) {
     switch (item->type) {
     case NO_STATE:
       break;
@@ -423,11 +460,12 @@ private:
     }
   }
 
-  void handleThingGetItem(AsyncWebServerRequest *request, ThingItem* item) {
+  void handleThingGetItem(AsyncWebServerRequest *request, ThingItem *item) {
     if (!verifyHost(request)) {
       return;
     }
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
 
     DynamicJsonDocument doc(256);
     JsonObject prop = doc.to<JsonObject>();
@@ -436,8 +474,9 @@ private:
     request->send(response);
   }
 
-  void handleThingGetAll(AsyncWebServerRequest *request, ThingItem* rootItem) {
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+  void handleThingGetAll(AsyncWebServerRequest *request, ThingItem *rootItem) {
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
 
     DynamicJsonDocument doc(256);
     JsonObject prop = doc.to<JsonObject>();
@@ -450,16 +489,18 @@ private:
     request->send(response);
   }
 
-  void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-    if (total >= ESP_MAX_PUT_BODY_SIZE || index + len >= ESP_MAX_PUT_BODY_SIZE) {
-        return; // cannot store this size..
+  void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len,
+                  size_t index, size_t total) {
+    if (total >= ESP_MAX_PUT_BODY_SIZE ||
+        index + len >= ESP_MAX_PUT_BODY_SIZE) {
+      return; // cannot store this size..
     }
     // copy to internal buffer
     memcpy(&body_data[index], data, len);
     b_has_body_data = true;
   }
 
-  void setThingProperty(const JsonObject newProp, ThingProperty* property) {
+  void setThingProperty(const JsonObject newProp, ThingProperty *property) {
     const JsonVariant newValue = newProp[property->id];
 
     switch (property->type) {
@@ -490,7 +531,8 @@ private:
     }
   }
 
-  void handleThingPropertyPut(AsyncWebServerRequest *request, ThingProperty* property) {
+  void handleThingPropertyPut(AsyncWebServerRequest *request,
+                              ThingProperty *property) {
     if (!verifyHost(request)) {
       return;
     }
@@ -511,16 +553,16 @@ private:
 
     setThingProperty(newProp, property);
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
     serializeJson(newProp, *response);
     request->send(response);
 
     b_has_body_data = false;
     memset(body_data, 0, sizeof(body_data));
   }
-
 };
 
-#endif    // ESP
+#endif // ESP
 
 #endif

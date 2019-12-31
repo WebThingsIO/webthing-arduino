@@ -14,29 +14,34 @@
 #include <Thing.h>
 #include <WebThingAdapter.h>
 
-//TODO: Hardcode your wifi credentials here (and keep it private)
-const char* ssid = "public";
-const char* password = "";
+// TODO: Hardcode your wifi credentials here (and keep it private)
+const char *ssid = "public";
+const char *password = "";
 
 /// Only used for monitoring, can be removed it's not part of our "thing"
 #if defined(LED_BUILTIN)
 const int ledPin = LED_BUILTIN;
 #else
-const int ledPin = 13;  // manually configure LED pin
+const int ledPin = 13; // manually configure LED pin
 #endif
 
-//for optional properties
-//const char * valEnum[5] = {"RED", "GREEN", "BLACK", "white", nullptr};
-//const char * valEnum[5] = {"#db4a4a", "#4adb58", "000000", "ffffff", nullptr};
+// for optional properties
+// const char * valEnum[5] = {"RED", "GREEN", "BLACK", "white", nullptr};
+// const char * valEnum[5] = {"#db4a4a", "#4adb58", "000000", "ffffff",
+// nullptr};
 
-WebThingAdapter* adapter;
+WebThingAdapter *adapter;
 
-const char* deviceTypes[] = {"Light", "OnOffSwitch", "ColorControl", nullptr};
-ThingDevice device("dimmable-color-light", "Dimmable Color Light", deviceTypes);
+const char *deviceTypes[] = {"Light", "OnOffSwitch", "ColorControl", nullptr};
+ThingDevice device("dimmable-color-light", "Dimmable Color Light",
+                   deviceTypes);
 
-ThingProperty deviceOn("on", "Whether the led is turned on", BOOLEAN, "OnOffProperty");
-ThingProperty deviceLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
-ThingProperty deviceColor("color", "The color of light in RGB", STRING, "ColorProperty");
+ThingProperty deviceOn("on", "Whether the led is turned on", BOOLEAN,
+                       "OnOffProperty");
+ThingProperty deviceLevel("level", "The level of light from 0-100", NUMBER,
+                          "BrightnessProperty");
+ThingProperty deviceColor("color", "The color of light in RGB", STRING,
+                          "ColorProperty");
 
 bool lastOn = false;
 String lastColor = "#ffffff";
@@ -44,7 +49,6 @@ String lastColor = "#ffffff";
 const unsigned char redPin = 12;
 const unsigned char greenPin = 13;
 const unsigned char bluePin = 14;
-
 
 void setupLamp(void) {
   pinMode(redPin, OUTPUT);
@@ -93,13 +97,13 @@ void setup(void) {
   deviceLevel.setValue(levelValue);
   device.addProperty(&deviceLevel);
 
-  //optional properties
-  //deviceColor.propertyEnum = valEnum;
-  //deviceColor.readOnly = true;
-  //deviceColor.unit = "HEX";
+  // optional properties
+  // deviceColor.propertyEnum = valEnum;
+  // deviceColor.readOnly = true;
+  // deviceColor.unit = "HEX";
 
   ThingPropertyValue colorValue;
-  colorValue.string = &lastColor; //default color is white
+  colorValue.string = &lastColor; // default color is white
   deviceColor.setValue(colorValue);
   device.addProperty(&deviceColor);
 
@@ -115,19 +119,20 @@ void setup(void) {
 #endif
 }
 
-void update(String* color, int const level) {
-  if (!color) return;
-  float dim = level/100.;
-  int red,green,blue;
+void update(String *color, int const level) {
+  if (!color)
+    return;
+  float dim = level / 100.;
+  int red, green, blue;
   if (color && (color->length() == 7) && color->charAt(0) == '#') {
-    const char* hex = 1+(color->c_str()); // skip leading '#'
-    sscanf(0+hex, "%2x", &red);
-    sscanf(2+hex, "%2x", &green);
-    sscanf(4+hex, "%2x", &blue);
+    const char *hex = 1 + (color->c_str()); // skip leading '#'
+    sscanf(0 + hex, "%2x", &red);
+    sscanf(2 + hex, "%2x", &green);
+    sscanf(4 + hex, "%2x", &blue);
   }
-  analogWrite(redPin, red*dim);
-  analogWrite(greenPin, green*dim );
-  analogWrite(bluePin, blue*dim );
+  analogWrite(redPin, red * dim);
+  analogWrite(greenPin, green * dim);
+  analogWrite(bluePin, blue * dim);
 }
 
 void loop(void) {

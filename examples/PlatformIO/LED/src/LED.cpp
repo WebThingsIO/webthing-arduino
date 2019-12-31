@@ -13,25 +13,25 @@
 #include "Thing.h"
 #include "WebThingAdapter.h"
 
-//TODO: Hardcode your wifi credentials here (and keep it private)
-const char* ssid = "public";
-const char* password = "";
+// TODO: Hardcode your wifi credentials here (and keep it private)
+const char *ssid = "public";
+const char *password = "";
 
 #if defined(LED_BUILTIN)
 const int ledPin = LED_BUILTIN;
 #else
-const int ledPin = 13;  // manually configure LED pin
+const int ledPin = 13; // manually configure LED pin
 #endif
 
-WebThingAdapter* adapter;
+WebThingAdapter *adapter;
 
-const char* ledTypes[] = {"OnOffSwitch", "Light", nullptr};
+const char *ledTypes[] = {"OnOffSwitch", "Light", nullptr};
 ThingDevice led("led", "Built-in LED", ledTypes);
 ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty");
 
 bool lastOn = false;
 
-void setup(void){
+void setup(void) {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
   Serial.begin(115200);
@@ -72,7 +72,7 @@ void setup(void){
   Serial.println(led.id);
 }
 
-void loop(void){
+void loop(void) {
   adapter->update();
   bool on = ledOn.getValue().boolean;
   digitalWrite(ledPin, on ? LOW : HIGH); // active low led
@@ -83,4 +83,3 @@ void loop(void){
   }
   lastOn = on;
 }
-

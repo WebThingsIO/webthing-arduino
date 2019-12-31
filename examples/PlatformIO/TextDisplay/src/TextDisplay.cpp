@@ -23,8 +23,8 @@ All text above, and the splash screen must be included in any redistribution
 #include <Thing.h>
 #include <WebThingAdapter.h>
 
-const char* ssid = "...";
-const char* password = "...";
+const char *ssid = "...";
+const char *password = "...";
 
 #include <SPI.h>
 #include <Wire.h>
@@ -32,12 +32,13 @@ const char* password = "...";
 #include <Adafruit_SSD1306.h>
 
 // If using software SPI (the default case):
-#define OLED_MOSI   2
-#define OLED_CLK   16
-#define OLED_DC    0
-#define OLED_CS    13
+#define OLED_MOSI 2
+#define OLED_CLK 16
+#define OLED_DC 0
+#define OLED_CS 13
 #define OLED_RESET 15
-Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, (int8_t)OLED_DC, OLED_RESET, OLED_CS);
+Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, (int8_t)OLED_DC, OLED_RESET,
+                         OLED_CS);
 
 /* Uncomment this block to use hardware SPI
 #define OLED_DC     6
@@ -51,15 +52,15 @@ const int textWidth = 6;
 const int width = 128;
 const int height = 64;
 
-WebThingAdapter* adapter;
+WebThingAdapter *adapter;
 
-const char* textDisplayTypes[] = {"TextDisplay", nullptr};
+const char *textDisplayTypes[] = {"TextDisplay", nullptr};
 ThingDevice textDisplay("textDisplay", "Text display", textDisplayTypes);
 ThingProperty text("text", "", STRING, nullptr);
 
 String lastText = "moz://a iot";
 
-void displayString(const String& str) {
+void displayString(const String &str) {
   int len = str.length();
   int strWidth = len * textWidth;
   int strHeight = textHeight;
@@ -81,7 +82,8 @@ void displayString(const String& str) {
 void setup() {
   Serial.begin(115200);
 
-  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
+  // by default, we'll generate the high voltage from the 3.3v line internally!
+  // (neat!)
   display.begin(SSD1306_SWITCHCAPVCC);
 
   // display the splashscreen as requested :)
@@ -122,4 +124,3 @@ void loop() {
   adapter->update();
   displayString(lastText);
 }
-

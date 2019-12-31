@@ -13,24 +13,26 @@
 #include <Thing.h>
 #include <WebThingAdapter.h>
 
-const char* ssid = "......";
-const char* password = "..........";
+const char *ssid = "......";
+const char *password = "..........";
 
 #if defined(LED_BUILTIN)
 const int lampPin = LED_BUILTIN;
 #else
-const int lampPin = 13;  // manually configure LED pin
+const int lampPin = 13; // manually configure LED pin
 #endif
 
-WebThingAdapter* adapter;
+WebThingAdapter *adapter;
 
-const char* lampTypes[] = {"OnOffSwitch", "Light", nullptr};
+const char *lampTypes[] = {"OnOffSwitch", "Light", nullptr};
 ThingDevice lamp("lamp", "My Lamp", lampTypes);
 
-ThingProperty lampOn("on", "Whether the lamp is turned on", BOOLEAN, "OnOffProperty");
-ThingProperty lampLevel("level", "The level of light from 0-100", NUMBER, "BrightnessProperty");
+ThingProperty lampOn("on", "Whether the lamp is turned on", BOOLEAN,
+                     "OnOffProperty");
+ThingProperty lampLevel("level", "The level of light from 0-100", NUMBER,
+                        "BrightnessProperty");
 
-void setup(void){
+void setup(void) {
   pinMode(lampPin, OUTPUT);
   digitalWrite(lampPin, HIGH);
   Serial.begin(115200);
@@ -64,7 +66,7 @@ void setup(void){
 #endif
 }
 
-void loop(void){
+void loop(void) {
   adapter->update();
   if (lampOn.getValue().boolean) {
     int level = map(lampLevel.getValue().number, 0, 100, 255, 0);
