@@ -71,8 +71,8 @@ public:
         event = (ThingEvent*) event->next;
       }
 
-      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->firstProperty));
-      this->server.on((deviceBase + "/events").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device, device->firstEvent));
+      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device->firstProperty));
+      this->server.on((deviceBase + "/events").c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThingGetAll, this, std::placeholders::_1, device->firstEvent));
       this->server.on(deviceBase.c_str(), HTTP_GET, std::bind(&WebThingAdapter::handleThing, this, std::placeholders::_1, device));
 
       device = device->next;
@@ -338,7 +338,7 @@ private:
     descr["id"] = device->id;
     descr["title"] = device->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
-    
+
     if (device->description != "") {
       descr["description"] = device->description;
     }
@@ -436,7 +436,7 @@ private:
     request->send(response);
   }
 
-  void handleThingGetAll(AsyncWebServerRequest *request, ThingDevice* device, ThingItem* rootItem) {
+  void handleThingGetAll(AsyncWebServerRequest *request, ThingItem* rootItem) {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
     DynamicJsonDocument doc(256);
