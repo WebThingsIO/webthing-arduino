@@ -2,7 +2,7 @@
     "name": "webthing-arduino",
     "description": "A library for creating Web Things using the Web of Things API. Runs on ESP8266, ESP32, and WiFi101 boards. Compatible with the Mozilla IoT Gateway.",
     "keywords": "Communication",
-    "version": "0.10.0",
+    "version": "0.10.1",
     "authors": {
         "name": "Mozilla IoT <iot@mozilla.com>"
     },
