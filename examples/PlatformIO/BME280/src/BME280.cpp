@@ -43,44 +43,40 @@
 #define PIN_STATE_LOW LOW
 #endif
 
-WebThingAdapter* adapter;
+WebThingAdapter *adapter;
 
-const char* bme280Types[] = {"TemperatureSensor", nullptr};
+const char *bme280Types[] = {"TemperatureSensor", nullptr};
 ThingDevice weather("bme280", "BME280 Weather Sensor", bme280Types);
 ThingProperty weatherTemp("temperature", "", NUMBER, "TemperatureProperty");
 ThingProperty weatherHum("humidity", "", NUMBER, nullptr);
 ThingProperty weatherPres("pressure", "", NUMBER, nullptr);
 
-BME280I2C::Settings settings(
-   BME280::OSR_X1,
-   BME280::OSR_X1,
-   BME280::OSR_X1,
-   BME280::Mode_Forced,
-   BME280::StandbyTime_1000ms,
-   BME280::Filter_Off,
-   BME280::SpiEnable_False,
-   (BME280I2C::I2CAddr) 0x76 // I2C address. I2C specific.
-);
+BME280I2C::Settings
+    settings(BME280::OSR_X1, BME280::OSR_X1, BME280::OSR_X1,
+             BME280::Mode_Forced, BME280::StandbyTime_1000ms,
+             BME280::Filter_Off, BME280::SpiEnable_False,
+             (BME280I2C::I2CAddr)0x76 // I2C address. I2C specific.
+    );
 
 BME280I2C bme(settings);
 
 void readBME280Data() {
-   float temp(NAN), hum(NAN), pres(NAN);
-   BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
-   BME280::PresUnit presUnit(BME280::PresUnit_Pa);
-   bme.read(pres, temp, hum, tempUnit, presUnit);
+  float temp(NAN), hum(NAN), pres(NAN);
+  BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
+  BME280::PresUnit presUnit(BME280::PresUnit_Pa);
+  bme.read(pres, temp, hum, tempUnit, presUnit);
 
-   ThingPropertyValue value;
-   value.number = pres;
-   weatherPres.setValue(value);
-   value.number = temp;
-   weatherTemp.setValue(value);
-   value.number = hum;
-   weatherHum.setValue(value);
+  ThingPropertyValue value;
+  value.number = pres;
+  weatherPres.setValue(value);
+  value.number = temp;
+  weatherTemp.setValue(value);
+  value.number = hum;
+  weatherHum.setValue(value);
 }
 
 void setup() {
-  //Initialize serial:
+  // Initialize serial:
   // Serial.begin(9600);
 
   // check for the presence of the shield:
@@ -88,14 +84,15 @@ void setup() {
   if (WiFi.status() == WL_NO_SHIELD) {
     // Serial.println("WiFi shield not present");
     // don't continue:
-    while (true);
+    while (true)
+      ;
   }
 
   // configure the LED pin for output mode
   pinMode(LED_BUILTIN, OUTPUT);
 
   Wire.begin();
-  while(!bme.begin()) {
+  while (!bme.begin()) {
     // Serial.println("Could not find BME280I2C sensor!");
     delay(1000);
   }
@@ -103,9 +100,11 @@ void setup() {
   // Serial.println("Starting in provisioning mode...");
   // Start in provisioning mode:
   //  1) This will try to connect to a previously associated access point.
-  //  2) If this fails, an access point named "wifi101-XXXX" will be created, where XXXX
-  //     is the last 4 digits of the boards MAC address. Once you are connected to the access point,
-  //     you can configure an SSID and password by visiting http://wifi101/
+  //  2) If this fails, an access point named "wifi101-XXXX" will be created,
+  //  where XXXX
+  //     is the last 4 digits of the boards MAC address. Once you are connected
+  //     to the access point, you can configure an SSID and password by
+  //     visiting http://wifi101/
   WiFi.beginProvision();
 
   while (WiFi.status() != WL_CONNECTED) {

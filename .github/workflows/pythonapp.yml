@@ -13,6 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - name: Lint source
+      uses: DoozyX/clang-format-lint-action@v0.5
+      with:
+        source: '.'
+        extensions: 'h,cpp,ino'
+        clangFormatVersion: 9
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
       with:

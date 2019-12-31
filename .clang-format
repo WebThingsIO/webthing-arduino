@@ -1,0 +1,4 @@
+BasedOnStyle: llvm
+ColumnLimit: 79
+IndentWidth: 2
+SortIncludes: false
