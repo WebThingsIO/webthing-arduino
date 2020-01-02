@@ -25,6 +25,22 @@
 
 #define ESP_MAX_PUT_BODY_SIZE 512
 
+#ifndef LARGE_JSON_DOCUMENT_SIZE
+#ifdef LARGE_JSON_BUFFERS
+#define LARGE_JSON_DOCUMENT_SIZE 4096
+#else
+#define LARGE_JSON_DOCUMENT_SIZE 1024
+#endif
+#endif
+
+#ifndef SMALL_JSON_DOCUMENT_SIZE
+#ifdef LARGE_JSON_BUFFERS
+#define SMALL_JSON_DOCUMENT_SIZE 1024
+#else
+#define SMALL_JSON_DOCUMENT_SIZE 256
+#endif
+#endif
+
 class WebThingAdapter {
 public:
   WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80)
@@ -101,7 +117,7 @@ public:
   void sendChangedPropsOrEvents(ThingDevice *device, const char *type,
                                 ThingItem *rootItem) {
     // Prepare one buffer per device
-    DynamicJsonDocument message(1024);
+    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
     message["messageType"] = type;
     JsonObject prop = message.createNestedObject("data");
     bool dataToSend = false;
@@ -224,7 +240,7 @@ private:
     // For now each Thing stores its own Websocket connection object therefore.
 
     // Parse request
-    DynamicJsonDocument newProp(1024);
+    DynamicJsonDocument newProp(LARGE_JSON_DOCUMENT_SIZE);
     auto error = deserializeJson(newProp, rawData);
     if (error) {
       sendErrorMsg(newProp, *client, 400, "Invalid json");
@@ -270,7 +286,7 @@ private:
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
 
-    DynamicJsonDocument buf(1024);
+    DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
     JsonArray things = buf.to<JsonArray>();
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
@@ -296,7 +312,7 @@ private:
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
 
-    DynamicJsonDocument buf(1024);
+    DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
     JsonObject descr = buf.to<JsonObject>();
     device->serialize(descr
 #ifndef WITHOUT_WS
@@ -316,7 +332,7 @@ private:
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
 
-    DynamicJsonDocument doc(256);
+    DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
     JsonObject prop = doc.to<JsonObject>();
     item->serialize(prop);
     serializeJson(prop, *response);
@@ -327,7 +343,7 @@ private:
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
 
-    DynamicJsonDocument doc(256);
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
@@ -390,7 +406,7 @@ private:
       return;
     }
 
-    DynamicJsonDocument newBuffer(256);
+    DynamicJsonDocument newBuffer(SMALL_JSON_DOCUMENT_SIZE);
     auto error = deserializeJson(newBuffer, body_data);
     if (error) { // unable to parse json
       b_has_body_data = false;

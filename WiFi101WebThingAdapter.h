@@ -27,6 +27,22 @@
 #define WITHOUT_WS 1
 #include "Thing.h"
 
+#ifndef LARGE_JSON_DOCUMENT_SIZE
+#ifdef LARGE_JSON_BUFFERS
+#define LARGE_JSON_DOCUMENT_SIZE 4096
+#else
+#define LARGE_JSON_DOCUMENT_SIZE 1024
+#endif
+#endif
+
+#ifndef SMALL_JSON_DOCUMENT_SIZE
+#ifdef LARGE_JSON_BUFFERS
+#define SMALL_JSON_DOCUMENT_SIZE 1024
+#else
+#define SMALL_JSON_DOCUMENT_SIZE 256
+#endif
+#endif
+
 static const bool DEBUG = false;
 
 enum HTTPMethod { HTTP_ANY, HTTP_GET, HTTP_PUT, HTTP_OPTIONS };
@@ -312,7 +328,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument buf(1024);
+    DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
     JsonArray things = buf.to<JsonArray>();
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
@@ -331,7 +347,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument buf(1024);
+    DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
     JsonObject descr = buf.to<JsonObject>();
     device->serialize(descr);
 
@@ -344,7 +360,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument doc(256);
+    DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
     JsonObject prop = doc.to<JsonObject>();
     item->serialize(prop);
     serializeJson(prop, client);
@@ -356,7 +372,7 @@ private:
     sendOk();
     sendHeaders();
 
-    DynamicJsonDocument doc(256);
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
@@ -402,7 +418,7 @@ private:
   void handleThingPropertyPut(ThingProperty *property) {
     sendOk();
     sendHeaders();
-    DynamicJsonDocument newBuffer(256);
+    DynamicJsonDocument newBuffer(SMALL_JSON_DOCUMENT_SIZE);
     auto error = deserializeJson(newBuffer, content);
     if (error) { // unable to parse json
       handleError();
