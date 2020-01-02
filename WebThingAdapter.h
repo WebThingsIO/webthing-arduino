@@ -8,10 +8,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#ifndef MOZILLA_IOT_WEBTHINGADAPTER_H
-#define MOZILLA_IOT_WEBTHINGADAPTER_H
+#pragma once
 
 #include "ESPWebThingAdapter.h"
 #include "WiFi101WebThingAdapter.h"
-
-#endif

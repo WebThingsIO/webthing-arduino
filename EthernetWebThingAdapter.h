@@ -9,8 +9,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#ifndef MOZILLA_IOT_ETHERNETWEBTHINGADAPTER_H
-#define MOZILLA_IOT_ETHERNETWEBTHINGADAPTER_H
+#pragma once
 
 #if !defined(ESP32) && !defined(ESP8266)
 
@@ -37,6 +36,7 @@ MDNS mdns(udp);
 
 #include <ArduinoJson.h>
 
+#define WITHOUT_WS 1
 #include "Thing.h"
 
 static const bool DEBUG = false;
@@ -246,6 +246,9 @@ private:
     if (host == ip) {
       return true;
     }
+    if (host == "localhost") {
+      return true;
+    }
     return false;
   }
 
@@ -334,7 +337,7 @@ private:
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
-      this->serializeDevice(descr, device);
+      device->serialize(descr);
       descr["href"] = "/things/" + device->id;
       device = device->next;
     }
@@ -344,166 +347,17 @@ private:
     client.stop();
   }
 
-  void serializePropertyOrEvent(JsonObject descr, ThingDevice *device,
-                                const char *type, bool isProp,
-                                ThingItem *item) {
-    String basePath = "/things/" + device->id + "/" + type + "/";
-    JsonObject props = descr.createNestedObject(type);
-    while (item != nullptr) {
-      JsonObject prop = props.createNestedObject(item->id);
-      switch (item->type) {
-      case NO_STATE:
-        break;
-      case BOOLEAN:
-        prop["type"] = "boolean";
-        break;
-      case NUMBER:
-        prop["type"] = "number";
-        break;
-      case INTEGER:
-        prop["type"] = "integer";
-        break;
-      case STRING:
-        prop["type"] = "string";
-        break;
-      }
-
-      if (item->readOnly) {
-        prop["readOnly"] = true;
-      }
-
-      if (item->unit != "") {
-        prop["unit"] = item->unit;
-      }
-
-      if (item->title != "") {
-        prop["title"] = item->title;
-      }
-
-      if (item->description != "") {
-        prop["description"] = item->description;
-      }
-
-      if (item->minimum < item->maximum) {
-        prop["minimum"] = item->minimum;
-      }
-
-      if (item->maximum > item->minimum) {
-        prop["maximum"] = item->maximum;
-      }
-
-      if (item->multipleOf > 0) {
-        prop["multipleOf"] = item->multipleOf;
-      }
-
-      if (isProp) {
-        ThingProperty *property = (ThingProperty *)item;
-        const char **enumVal = property->propertyEnum;
-        bool hasEnum = (property->propertyEnum != nullptr) &&
-                       ((*property->propertyEnum) != nullptr);
-
-        if (hasEnum) {
-          enumVal = property->propertyEnum;
-          JsonArray propEnum = prop.createNestedArray("enum");
-          while (property->propertyEnum != nullptr && (*enumVal) != nullptr) {
-            propEnum.add(*enumVal);
-            enumVal++;
-          }
-        }
-      }
-
-      if (item->atType != nullptr) {
-        prop["@type"] = item->atType;
-      }
-
-      // 2.9 Property object: A links array (An array of Link objects linking
-      // to one or more representations of a Property resource, each with an
-      // implied default rel=property.)
-      JsonArray inline_links = prop.createNestedArray("links");
-      JsonObject inline_links_prop = inline_links.createNestedObject();
-      inline_links_prop["href"] = basePath + item->id;
-
-      item = item->next;
-    }
-  }
-
-  void serializeDevice(JsonObject descr, ThingDevice *device) {
-    descr["id"] = device->id;
-    descr["title"] = device->title;
-    descr["@context"] = "https://iot.mozilla.org/schemas";
-
-    if (device->description != "") {
-      descr["description"] = device->description;
-    }
-    // TODO: descr["base"] = ???
-
-    JsonObject securityDefinitions =
-        descr.createNestedObject("securityDefinitions");
-    JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
-    nosecSc["scheme"] = "nosec";
-    descr["security"] = "nosec_sc";
-
-    JsonArray typeJson = descr.createNestedArray("@type");
-    const char **type = device->type;
-    while ((*type) != nullptr) {
-      typeJson.add(*type);
-      type++;
-    }
-
-    JsonArray links = descr.createNestedArray("links");
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "properties";
-      links_prop["href"] = "/things/" + device->id + "/properties";
-    }
-
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "events";
-      links_prop["href"] = "/things/" + device->id + "/events";
-    }
-
-    ThingProperty *property = device->firstProperty;
-    if (property) {
-      serializePropertyOrEvent(descr, device, "properties", true, property);
-    }
-
-    ThingEvent *event = device->firstEvent;
-    if (event) {
-      serializePropertyOrEvent(descr, device, "events", false, event);
-    }
-  }
-
   void handleThing(ThingDevice *device) {
     sendOk();
     sendHeaders();
 
     DynamicJsonDocument buf(1024);
     JsonObject descr = buf.to<JsonObject>();
-    this->serializeDevice(descr, device);
+    device->serialize(descr);
 
     serializeJson(descr, client);
     delay(1);
     client.stop();
-  }
-
-  void serializeThingItem(ThingItem *item, JsonObject prop) {
-    switch (item->type) {
-    case NO_STATE:
-      break;
-    case BOOLEAN:
-      prop[item->id] = item->getValue().boolean;
-      break;
-    case NUMBER:
-      prop[item->id] = item->getValue().number;
-      break;
-    case INTEGER:
-      prop[item->id] = item->getValue().integer;
-      break;
-    case STRING:
-      prop[item->id] = *item->getValue().string;
-      break;
-    }
   }
 
   void handleThingGetItem(ThingItem *item) {
@@ -512,7 +366,7 @@ private:
 
     DynamicJsonDocument doc(256);
     JsonObject prop = doc.to<JsonObject>();
-    serializeThingItem(item, prop);
+    item->serialize(prop);
     serializeJson(prop, client);
     delay(1);
     client.stop();
@@ -526,7 +380,7 @@ private:
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
-      serializeThingItem(item, prop);
+      item->serialize(prop);
       item = item->next;
     }
     serializeJson(prop, client);
@@ -603,5 +457,3 @@ private:
 };
 
 #endif // neither ESP32 nor ESP8266 defined
-
-#endif // MOZILLA_IOT_ETHERNETWEBTHINGADAPTER_H

@@ -9,8 +9,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#ifndef MOZILLA_IOT_ESPWEBTHINGADAPTER_H
-#define MOZILLA_IOT_ESPWEBTHINGADAPTER_H
+#pragma once
 
 #if defined(ESP32) || defined(ESP8266)
 
@@ -111,7 +110,7 @@ public:
       ThingPropertyValue *value = item->changedValueOrNull();
       if (value) {
         dataToSend = true;
-        this->serializeThingItem(item, prop);
+        item->serialize(prop);
       }
       item = item->next;
     }
@@ -186,7 +185,7 @@ private:
     if (colonIndex >= 0) {
       value.remove(colonIndex);
     }
-    if (value == name + ".local" || value == ip) {
+    if (value == name + ".local" || value == ip || value == "localhost") {
       return true;
     }
     request->send(403);
@@ -276,154 +275,18 @@ private:
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
-      this->serializeDevice(descr, device);
+      device->serialize(descr
+#ifndef WITHOUT_WS
+                        ,
+                        ip, port
+#endif
+      );
       descr["href"] = "/things/" + device->id;
       device = device->next;
     }
 
     serializeJson(things, *response);
     request->send(response);
-  }
-
-  void serializePropertyOrEvent(JsonObject descr, ThingDevice *device,
-                                const char *type, bool isProp,
-                                ThingItem *item) {
-    String basePath = "/things/" + device->id + "/" + type + "/";
-    JsonObject props = descr.createNestedObject(type);
-    while (item != nullptr) {
-      JsonObject prop = props.createNestedObject(item->id);
-      switch (item->type) {
-      case NO_STATE:
-        break;
-      case BOOLEAN:
-        prop["type"] = "boolean";
-        break;
-      case NUMBER:
-        prop["type"] = "number";
-        break;
-      case INTEGER:
-        prop["type"] = "integer";
-        break;
-      case STRING:
-        prop["type"] = "string";
-        break;
-      }
-
-      if (item->readOnly) {
-        prop["readOnly"] = true;
-      }
-
-      if (item->unit != "") {
-        prop["unit"] = item->unit;
-      }
-
-      if (item->title != "") {
-        prop["title"] = item->title;
-      }
-
-      if (item->description != "") {
-        prop["description"] = item->description;
-      }
-
-      if (item->minimum < item->maximum) {
-        prop["minimum"] = item->minimum;
-      }
-
-      if (item->maximum > item->minimum) {
-        prop["maximum"] = item->maximum;
-      }
-
-      if (item->multipleOf > 0) {
-        prop["multipleOf"] = item->multipleOf;
-      }
-
-      if (isProp) {
-        ThingProperty *property = (ThingProperty *)item;
-        const char **enumVal = property->propertyEnum;
-        bool hasEnum = (property->propertyEnum != nullptr) &&
-                       ((*property->propertyEnum) != nullptr);
-
-        if (hasEnum) {
-          enumVal = property->propertyEnum;
-          JsonArray propEnum = prop.createNestedArray("enum");
-          while (property->propertyEnum != nullptr && (*enumVal) != nullptr) {
-            propEnum.add(*enumVal);
-            enumVal++;
-          }
-        }
-      }
-
-      if (item->atType != nullptr) {
-        prop["@type"] = item->atType;
-      }
-
-      // 2.9 Property object: A links array (An array of Link objects linking
-      // to one or more representations of a Property resource, each with an
-      // implied default rel=property.)
-      JsonArray inline_links = prop.createNestedArray("links");
-      JsonObject inline_links_prop = inline_links.createNestedObject();
-      inline_links_prop["href"] = basePath + item->id;
-
-      item = item->next;
-    }
-  }
-
-  void serializeDevice(JsonObject descr, ThingDevice *device) {
-    descr["id"] = device->id;
-    descr["title"] = device->title;
-    descr["@context"] = "https://iot.mozilla.org/schemas";
-
-    if (device->description != "") {
-      descr["description"] = device->description;
-    }
-    // TODO: descr["base"] = ???
-
-    JsonObject securityDefinitions =
-        descr.createNestedObject("securityDefinitions");
-    JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
-    nosecSc["scheme"] = "nosec";
-    descr["security"] = "nosec_sc";
-
-    JsonArray typeJson = descr.createNestedArray("@type");
-    const char **type = device->type;
-    while ((*type) != nullptr) {
-      typeJson.add(*type);
-      type++;
-    }
-
-    JsonArray links = descr.createNestedArray("links");
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "properties";
-      links_prop["href"] = "/things/" + device->id + "/properties";
-    }
-
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "events";
-      links_prop["href"] = "/things/" + device->id + "/events";
-    }
-
-#ifndef WITHOUT_WS
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "alternate";
-      char buffer[33];
-      itoa(port, buffer, 10);
-      links_prop["href"] =
-          "ws://" + ip + ":" + buffer + "/things/" + device->id;
-    }
-#endif
-
-    ThingProperty *property = device->firstProperty;
-    if (property) {
-      serializePropertyOrEvent(descr, device, "properties", true, property);
-    }
-
-    ThingEvent *event = device->firstEvent;
-    if (event) {
-      serializePropertyOrEvent(descr, device, "events", false, event);
-    }
   }
 
   void handleThing(AsyncWebServerRequest *request, ThingDevice *&device) {
@@ -435,29 +298,15 @@ private:
 
     DynamicJsonDocument buf(1024);
     JsonObject descr = buf.to<JsonObject>();
-    this->serializeDevice(descr, device);
+    device->serialize(descr
+#ifndef WITHOUT_WS
+                      ,
+                      ip, port
+#endif
+    );
 
     serializeJson(descr, *response);
     request->send(response);
-  }
-
-  void serializeThingItem(ThingItem *item, JsonObject prop) {
-    switch (item->type) {
-    case NO_STATE:
-      break;
-    case BOOLEAN:
-      prop[item->id] = item->getValue().boolean;
-      break;
-    case NUMBER:
-      prop[item->id] = item->getValue().number;
-      break;
-    case INTEGER:
-      prop[item->id] = item->getValue().integer;
-      break;
-    case STRING:
-      prop[item->id] = *item->getValue().string;
-      break;
-    }
   }
 
   void handleThingGetItem(AsyncWebServerRequest *request, ThingItem *item) {
@@ -469,7 +318,7 @@ private:
 
     DynamicJsonDocument doc(256);
     JsonObject prop = doc.to<JsonObject>();
-    serializeThingItem(item, prop);
+    item->serialize(prop);
     serializeJson(prop, *response);
     request->send(response);
   }
@@ -482,7 +331,7 @@ private:
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
-      serializeThingItem(item, prop);
+      item->serialize(prop);
       item = item->next;
     }
     serializeJson(prop, *response);
@@ -564,5 +413,3 @@ private:
 };
 
 #endif // ESP
-
-#endif
