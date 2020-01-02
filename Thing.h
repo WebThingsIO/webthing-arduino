@@ -11,6 +11,10 @@
 
 #pragma once
 
+#if !defined(ESP8266) && !defined(ESP32) && !defined(WITHOUT_WS)
+#define WITHOUT_WS 1
+#endif
+
 #if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
 #include <ESPAsyncWebServer.h>
 #endif
