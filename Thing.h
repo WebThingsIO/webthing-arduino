@@ -32,6 +32,85 @@ union ThingDataValue {
 };
 typedef ThingDataValue ThingPropertyValue;
 
+class ThingAction {
+public:
+  String id;
+  String title;
+  String description;
+  String type;
+  JsonObject *input;
+  ThingAction *next = nullptr;
+
+  ThingAction(const char *id_) : id(id_) {}
+  ThingAction(const char *id_, JsonObject *input_) : id(id_), input(input_) {}
+  ThingAction(const char *id_, const char *title_, const char *description_,
+              const char *type_, JsonObject *input_)
+      : id(id_), title(title_), description(description_), type(type_),
+        input(input_) {}
+
+  void serialize(JsonObject obj, String deviceId) {
+    if (title != "") {
+      obj["title"] = title;
+    }
+
+    if (description != "") {
+      obj["description"] = description;
+    }
+
+    if (type != "") {
+      obj["@type"] = type;
+    }
+
+    if (input != nullptr) {
+      JsonObject inputObj = obj.createNestedObject("input");
+      for (JsonPair kv : *input) {
+        inputObj[kv.key()] = kv.value();
+      }
+    }
+
+    // 2.11 Action object: A links array (An array of Link objects linking
+    // to one or more representations of an Action resource, each with an
+    // implied default rel=action.)
+    JsonArray inline_links = obj.createNestedArray("links");
+    JsonObject inline_links_prop = inline_links.createNestedObject();
+    inline_links_prop["href"] = "/things/" + deviceId + "/actions/" + id;
+  }
+};
+
+class ThingActionObject {
+public:
+  String name;
+  JsonVariant *input = nullptr;
+  String timeRequested;
+  String timeCompleted;
+  String status;
+  String id;
+  ThingActionObject *next = nullptr;
+
+  ThingActionObject(const char *name_)
+      : name(name_), timeRequested("1970-01-01T00:00:00+00:00") {}
+  ThingActionObject(const char *name_, JsonVariant *input_)
+      : name(name_), input(input_),
+        timeRequested("1970-01-01T00:00:00+00:00") {}
+
+  void serialize(JsonObject obj, String deviceId) {
+    JsonObject data = obj.createNestedObject(name);
+
+    if (input != nullptr) {
+      data["input"] = input;
+    }
+
+    data["status"] = status;
+    data["timeRequested"] = timeRequested;
+
+    if (timeCompleted != "") {
+      data["timeCompleted"] = timeCompleted;
+    }
+
+    data["href"] = "/things/" + deviceId + "/actions/" + name + "/" + id;
+  }
+};
+
 class ThingItem {
 public:
   String id;
@@ -68,7 +147,66 @@ public:
 
   ThingDataValue getValue() { return this->value; }
 
-  void serialize(JsonObject prop) {
+  void serialize(JsonObject obj, String deviceId, String resourceType) {
+    switch (type) {
+    case NO_STATE:
+      break;
+    case BOOLEAN:
+      obj["type"] = "boolean";
+      break;
+    case NUMBER:
+      obj["type"] = "number";
+      break;
+    case INTEGER:
+      obj["type"] = "integer";
+      break;
+    case STRING:
+      obj["type"] = "string";
+      break;
+    }
+
+    if (readOnly) {
+      obj["readOnly"] = true;
+    }
+
+    if (unit != "") {
+      obj["unit"] = unit;
+    }
+
+    if (title != "") {
+      obj["title"] = title;
+    }
+
+    if (description != "") {
+      obj["description"] = description;
+    }
+
+    if (minimum < maximum) {
+      obj["minimum"] = minimum;
+    }
+
+    if (maximum > minimum) {
+      obj["maximum"] = maximum;
+    }
+
+    if (multipleOf > 0) {
+      obj["multipleOf"] = multipleOf;
+    }
+
+    if (atType != nullptr) {
+      obj["@type"] = atType;
+    }
+
+    // 2.9 Property object: A links array (An array of Link objects linking
+    // to one or more representations of a Property resource, each with an
+    // implied default rel=property.)
+    JsonArray inline_links = obj.createNestedArray("links");
+    JsonObject inline_links_prop = inline_links.createNestedObject();
+    inline_links_prop["href"] =
+        "/things/" + deviceId + "/" + resourceType + "/" + id;
+  }
+
+  void serializeValue(JsonObject prop) {
     switch (this->type) {
     case NO_STATE:
       break;
@@ -99,6 +237,22 @@ public:
   ThingProperty(const char *id_, const char *description_, ThingDataType type_,
                 const char *atType_)
       : ThingItem(id_, description_, type_, atType_) {}
+
+  void serialize(JsonObject obj, String deviceId, String resourceType) {
+    ThingItem::serialize(obj, deviceId, resourceType);
+
+    const char **enumVal = propertyEnum;
+    bool hasEnum = propertyEnum != nullptr && *propertyEnum != nullptr;
+
+    if (hasEnum) {
+      enumVal = propertyEnum;
+      JsonArray propEnum = obj.createNestedArray("enum");
+      while (propertyEnum != nullptr && *enumVal != nullptr) {
+        propEnum.add(*enumVal);
+        enumVal++;
+      }
+    }
+  }
 };
 
 #ifndef WITHOUT_WS
@@ -214,6 +368,8 @@ public:
 #endif
   ThingDevice *next = nullptr;
   ThingProperty *firstProperty = nullptr;
+  ThingAction *firstAction = nullptr;
+  ThingActionObject *actionQueue = nullptr;
   ThingEvent *firstEvent = nullptr;
   ThingEventObject *eventQueue = nullptr;
 
@@ -261,6 +417,21 @@ public:
     firstProperty = property;
   }
 
+  ThingAction *findAction(const char *id) {
+    ThingAction *a = this->firstAction;
+    while (a) {
+      if (!strcmp(a->id.c_str(), id))
+        return a;
+      a = (ThingAction *)a->next;
+    }
+    return nullptr;
+  }
+
+  void addAction(ThingAction *action) {
+    action->next = firstAction;
+    firstAction = action;
+  }
+
   ThingEvent *findEvent(const char *id) {
     ThingEvent *e = this->firstEvent;
     while (e) {
@@ -274,6 +445,50 @@ public:
   void addEvent(ThingEvent *event) {
     event->next = firstEvent;
     firstEvent = event;
+  }
+
+  void setProperty(const char *name, const JsonVariant &newValue) {
+    ThingProperty *property = findProperty(name);
+
+    if (property == nullptr) {
+      return;
+    }
+
+    switch (property->type) {
+    case NO_STATE: {
+      break;
+    }
+    case BOOLEAN: {
+      ThingDataValue value;
+      value.boolean = newValue.as<bool>();
+      property->setValue(value);
+      break;
+    }
+    case NUMBER: {
+      ThingDataValue value;
+      value.number = newValue.as<double>();
+      property->setValue(value);
+      break;
+    }
+    case INTEGER: {
+      ThingDataValue value;
+      value.integer = newValue.as<signed long long>();
+      property->setValue(value);
+      break;
+    }
+    case STRING:
+      *(property->getValue().string) = newValue.as<String>();
+      break;
+    }
+  }
+
+  ThingActionObject *requestAction(DynamicJsonDocument *action) {
+    return nullptr;
+  }
+
+  void queueActionObject(ThingActionObject *obj) {
+    obj->next = actionQueue;
+    actionQueue = obj;
   }
 
   void queueEventObject(ThingEventObject *obj) {
@@ -343,6 +558,12 @@ public:
 
     {
       JsonObject links_prop = links.createNestedObject();
+      links_prop["rel"] = "actions";
+      links_prop["href"] = "/things/" + this->id + "/actions";
+    }
+
+    {
+      JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "events";
       links_prop["href"] = "/things/" + this->id + "/events";
     }
@@ -358,95 +579,53 @@ public:
 #endif
 
     ThingProperty *property = this->firstProperty;
-    if (property) {
-      serializePropertyOrEvent(descr, "properties", true, property);
+    if (property != nullptr) {
+      JsonObject properties = descr.createNestedObject("properties");
+      while (property != nullptr) {
+        JsonObject obj = properties.createNestedObject(property->id);
+        property->serialize(obj, id, "properties");
+        property = (ThingProperty *)property->next;
+      }
+    }
+
+    ThingAction *action = this->firstAction;
+    if (action != nullptr) {
+      JsonObject actions = descr.createNestedObject("actions");
+      while (action != nullptr) {
+        JsonObject obj = actions.createNestedObject(action->id);
+        action->serialize(obj, id);
+        action = action->next;
+      }
     }
 
     ThingEvent *event = this->firstEvent;
-    if (event) {
-      serializePropertyOrEvent(descr, "events", false, event);
+    if (event != nullptr) {
+      JsonObject events = descr.createNestedObject("events");
+      while (event != nullptr) {
+        JsonObject obj = events.createNestedObject(event->id);
+        event->serialize(obj, id, "events");
+        event = (ThingEvent *)event->next;
+      }
     }
   }
 
-  void serializePropertyOrEvent(JsonObject descr, const char *type,
-                                bool isProp, ThingItem *item) {
-    String basePath = "/things/" + this->id + "/" + type + "/";
-    JsonObject props = descr.createNestedObject(type);
-    while (item != nullptr) {
-      JsonObject prop = props.createNestedObject(item->id);
-      switch (item->type) {
-      case NO_STATE:
-        break;
-      case BOOLEAN:
-        prop["type"] = "boolean";
-        break;
-      case NUMBER:
-        prop["type"] = "number";
-        break;
-      case INTEGER:
-        prop["type"] = "integer";
-        break;
-      case STRING:
-        prop["type"] = "string";
-        break;
+  void serializeActionQueue(JsonArray array) {
+    ThingActionObject *curr = actionQueue;
+    while (curr != nullptr) {
+      JsonObject action = array.createNestedObject();
+      curr->serialize(action, id);
+      curr = curr->next;
+    }
+  }
+
+  void serializeActionQueue(JsonArray array, String name) {
+    ThingActionObject *curr = actionQueue;
+    while (curr != nullptr) {
+      if (curr->name == name) {
+        JsonObject action = array.createNestedObject();
+        curr->serialize(action, id);
       }
-
-      if (item->readOnly) {
-        prop["readOnly"] = true;
-      }
-
-      if (item->unit != "") {
-        prop["unit"] = item->unit;
-      }
-
-      if (item->title != "") {
-        prop["title"] = item->title;
-      }
-
-      if (item->description != "") {
-        prop["description"] = item->description;
-      }
-
-      if (item->minimum < item->maximum) {
-        prop["minimum"] = item->minimum;
-      }
-
-      if (item->maximum > item->minimum) {
-        prop["maximum"] = item->maximum;
-      }
-
-      if (item->multipleOf > 0) {
-        prop["multipleOf"] = item->multipleOf;
-      }
-
-      if (isProp) {
-        ThingProperty *property = (ThingProperty *)item;
-        const char **enumVal = property->propertyEnum;
-        bool hasEnum = (property->propertyEnum != nullptr) &&
-                       ((*property->propertyEnum) != nullptr);
-
-        if (hasEnum) {
-          enumVal = property->propertyEnum;
-          JsonArray propEnum = prop.createNestedArray("enum");
-          while (property->propertyEnum != nullptr && (*enumVal) != nullptr) {
-            propEnum.add(*enumVal);
-            enumVal++;
-          }
-        }
-      }
-
-      if (item->atType != nullptr) {
-        prop["@type"] = item->atType;
-      }
-
-      // 2.9 Property object: A links array (An array of Link objects linking
-      // to one or more representations of a Property resource, each with an
-      // implied default rel=property.)
-      JsonArray inline_links = prop.createNestedArray("links");
-      JsonObject inline_links_prop = inline_links.createNestedObject();
-      inline_links_prop["href"] = basePath + item->id;
-
-      item = item->next;
+      curr = curr->next;
     }
   }
 

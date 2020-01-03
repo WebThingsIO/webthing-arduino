@@ -13,7 +13,6 @@
 #if !defined(ESP32) && !defined(ESP8266)
 
 #include <Arduino.h>
-
 #if defined(STM32F7xx)
 #include <LwIP.h>
 #include <STM32Ethernet.h>
@@ -56,7 +55,7 @@ MDNS mdns(udp);
 
 static const bool DEBUG = false;
 
-enum HTTPMethod { HTTP_ANY, HTTP_GET, HTTP_PUT, HTTP_OPTIONS };
+enum HTTPMethod { HTTP_ANY, HTTP_GET, HTTP_PUT, HTTP_POST, HTTP_OPTIONS };
 
 enum ReadState {
   STATE_READ_METHOD,
@@ -144,6 +143,8 @@ public:
       if (c == ' ') {
         if (methodRaw == "GET") {
           method = HTTP_GET;
+        } else if (methodRaw == "POST") {
+          method = HTTP_POST;
         } else if (methodRaw == "PUT") {
           method = HTTP_PUT;
         } else if (methodRaw == "OPTIONS") {
@@ -307,9 +308,28 @@ private:
           }
           return;
         } else if (uri == deviceBase + "/properties") {
-          handleThingPropertiesGet(device->firstProperty);
+          if (method == HTTP_GET || method == HTTP_OPTIONS) {
+            handleThingPropertiesGet(device->firstProperty);
+          } else {
+            handleError();
+          }
+          return;
+        } else if (uri == deviceBase + "/actions") {
+          if (method == HTTP_GET || method == HTTP_OPTIONS) {
+            handleThingActionsGet(device);
+          } else if (method == HTTP_POST) {
+            handleThingActionsPost(device);
+          } else {
+            handleError();
+          }
+          return;
         } else if (uri == deviceBase + "/events") {
-          handleThingEventsGet(device);
+          if (method == HTTP_GET || method == HTTP_OPTIONS) {
+            handleThingEventsGet(device);
+          } else {
+            handleError();
+          }
+          return;
         } else {
           ThingProperty *property = device->firstProperty;
           while (property != nullptr) {
@@ -318,13 +338,29 @@ private:
               if (method == HTTP_GET || method == HTTP_OPTIONS) {
                 handleThingPropertyGet(property);
               } else if (method == HTTP_PUT) {
-                handleThingPropertyPut(property);
+                handleThingPropertyPut(device, property);
               } else {
                 handleError();
               }
               return;
             }
             property = (ThingProperty *)property->next;
+          }
+
+          ThingAction *action = device->firstAction;
+          while (action != nullptr) {
+            String actionBase = deviceBase + "/actions/" + action->id;
+            if (uri == actionBase) {
+              if (method == HTTP_GET || method == HTTP_OPTIONS) {
+                handleThingActionGet(device, action);
+              } else if (method == HTTP_POST) {
+                handleThingActionPost(device, action);
+              } else {
+                handleError();
+              }
+              return;
+            }
+            action = action->next;
           }
 
           ThingEvent *event = device->firstEvent;
@@ -349,9 +385,11 @@ private:
 
   void sendOk() { client.println("HTTP/1.1 200 OK"); }
 
+  void sendCreated() { client.println("HTTP/1.1 201 Created"); }
+
   void sendHeaders() {
     client.println("Access-Control-Allow-Origin: *");
-    client.println("Access-Control-Allow-Methods: PUT, GET, OPTIONS");
+    client.println("Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS");
     client.println("Content-Type: application/json");
     client.println("Connection: close");
     client.println();
@@ -395,8 +433,57 @@ private:
 
     DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
     JsonObject prop = doc.to<JsonObject>();
-    item->serialize(prop);
+    item->serializeValue(prop);
     serializeJson(prop, client);
+    delay(1);
+    client.stop();
+  }
+
+  void handleThingActionGet(ThingDevice *device, ThingAction *action) {
+    sendOk();
+    sendHeaders();
+
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeActionQueue(queue, action->id);
+    serializeJson(queue, client);
+    delay(1);
+    client.stop();
+  }
+
+  void handleThingActionPost(ThingDevice *device, ThingAction *action) {
+    DynamicJsonDocument *newBuffer =
+        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
+    auto error = deserializeJson(*newBuffer, content);
+    if (error) { // unable to parse json
+      handleError();
+      delete newBuffer;
+      return;
+    }
+
+    JsonObject newAction = newBuffer->as<JsonObject>();
+
+    if (!newAction.containsKey(action->id)) {
+      handleError();
+      delete newBuffer;
+      return;
+    }
+
+    ThingActionObject *obj = device->requestAction(newBuffer);
+
+    if (obj == nullptr) {
+      handleError();
+      delete newBuffer;
+      return;
+    }
+
+    sendCreated();
+    sendHeaders();
+
+    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
+    JsonObject item = respBuffer.to<JsonObject>();
+    obj->serialize(item, device->id);
+    serializeJson(item, client);
     delay(1);
     client.stop();
   }
@@ -421,10 +508,59 @@ private:
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
-      item->serialize(prop);
+      item->serializeValue(prop);
       item = item->next;
     }
     serializeJson(prop, client);
+    delay(1);
+    client.stop();
+  }
+
+  void handleThingActionsGet(ThingDevice *device) {
+    sendOk();
+    sendHeaders();
+
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeActionQueue(queue);
+    serializeJson(queue, client);
+    delay(1);
+    client.stop();
+  }
+
+  void handleThingActionsPost(ThingDevice *device) {
+    DynamicJsonDocument *newBuffer =
+        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
+    auto error = deserializeJson(*newBuffer, content);
+    if (error) { // unable to parse json
+      handleError();
+      delete newBuffer;
+      return;
+    }
+
+    JsonObject newAction = newBuffer->as<JsonObject>();
+
+    if (!newAction.size() != 1) {
+      handleError();
+      delete newBuffer;
+      return;
+    }
+
+    ThingActionObject *obj = device->requestAction(newBuffer);
+
+    if (obj == nullptr) {
+      handleError();
+      delete newBuffer;
+      return;
+    }
+
+    sendCreated();
+    sendHeaders();
+
+    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
+    JsonObject item = respBuffer.to<JsonObject>();
+    obj->serialize(item, device->id);
+    serializeJson(item, client);
     delay(1);
     client.stop();
   }
@@ -441,40 +577,7 @@ private:
     client.stop();
   }
 
-  void setThingProperty(const JsonObject newProp, ThingProperty *property) {
-    const JsonVariant newValue = newProp[property->id];
-
-    switch (property->type) {
-    case NO_STATE: {
-      break;
-    }
-    case BOOLEAN: {
-      ThingDataValue value;
-      value.boolean = newValue.as<bool>();
-      property->setValue(value);
-      break;
-    }
-    case NUMBER: {
-      ThingDataValue value;
-      value.number = newValue.as<double>();
-      property->setValue(value);
-      break;
-    }
-    case INTEGER: {
-      ThingDataValue value;
-      value.integer = newValue.as<signed long long>();
-      property->setValue(value);
-      break;
-    }
-    case STRING:
-      *(property->getValue().string) = newValue.as<String>();
-      break;
-    }
-  }
-
-  void handleThingPropertyPut(ThingProperty *property) {
-    sendOk();
-    sendHeaders();
+  void handleThingPropertyPut(ThingDevice *device, ThingProperty *property) {
     DynamicJsonDocument newBuffer(SMALL_JSON_DOCUMENT_SIZE);
     auto error = deserializeJson(newBuffer, content);
     if (error) { // unable to parse json
@@ -483,7 +586,15 @@ private:
     }
     JsonObject newProp = newBuffer.as<JsonObject>();
 
-    setThingProperty(newProp, property);
+    if (!newProp.containsKey(property->id)) {
+      handleError();
+      return;
+    }
+
+    device->setProperty(property->id.c_str(), newProp[property->id]);
+
+    sendOk();
+    sendHeaders();
 
     serializeJson(newProp, client);
     delay(1);

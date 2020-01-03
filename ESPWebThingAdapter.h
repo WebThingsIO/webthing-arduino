@@ -78,7 +78,8 @@ public:
                                   this, std::placeholders::_1, property));
         this->server.on(propertyBase.c_str(), HTTP_PUT,
                         std::bind(&WebThingAdapter::handleThingPropertyPut,
-                                  this, std::placeholders::_1, property),
+                                  this, std::placeholders::_1, device,
+                                  property),
                         NULL,
                         std::bind(&WebThingAdapter::handleBody, this,
                                   std::placeholders::_1, std::placeholders::_2,
@@ -86,6 +87,23 @@ public:
                                   std::placeholders::_5));
 
         property = (ThingProperty *)property->next;
+      }
+
+      ThingAction *action = device->firstAction;
+      while (action != nullptr) {
+        String actionBase = deviceBase + "/actions/" + action->id;
+        this->server.on(actionBase.c_str(), HTTP_GET,
+                        std::bind(&WebThingAdapter::handleThingActionGet, this,
+                                  std::placeholders::_1, device, action));
+        this->server.on(actionBase.c_str(), HTTP_POST,
+                        std::bind(&WebThingAdapter::handleThingActionPost,
+                                  this, std::placeholders::_1, device, action),
+                        NULL,
+                        std::bind(&WebThingAdapter::handleBody, this,
+                                  std::placeholders::_1, std::placeholders::_2,
+                                  std::placeholders::_3, std::placeholders::_4,
+                                  std::placeholders::_5));
+        action = (ThingAction *)action->next;
       }
 
       ThingEvent *event = device->firstEvent;
@@ -101,6 +119,17 @@ public:
                       std::bind(&WebThingAdapter::handleThingPropertiesGet,
                                 this, std::placeholders::_1,
                                 device->firstProperty));
+      this->server.on((deviceBase + "/actions").c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingActionsGet, this,
+                                std::placeholders::_1, device));
+      this->server.on((deviceBase + "/actions").c_str(), HTTP_POST,
+                      std::bind(&WebThingAdapter::handleThingActionsPost, this,
+                                std::placeholders::_1, device),
+                      NULL,
+                      std::bind(&WebThingAdapter::handleBody, this,
+                                std::placeholders::_1, std::placeholders::_2,
+                                std::placeholders::_3, std::placeholders::_4,
+                                std::placeholders::_5));
       this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
                       std::bind(&WebThingAdapter::handleThingEventsGet, this,
                                 std::placeholders::_1, device));
@@ -126,7 +155,7 @@ public:
       ThingDataValue *value = item->changedValueOrNull();
       if (value) {
         dataToSend = true;
-        item->serialize(prop);
+        item->serializeValue(prop);
       }
       item = item->next;
     }
@@ -145,7 +174,7 @@ public:
 #endif
 #ifndef WITHOUT_WS
     // * Send changed properties as defined in "4.5 propertyStatus message"
-    // Do this by looping over all devices and properties/events
+    // Do this by looping over all devices and properties
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       sendChangedProperties(device);
@@ -242,7 +271,7 @@ private:
     // For now each Thing stores its own Websocket connection object therefore.
 
     // Parse request
-    DynamicJsonDocument newProp(LARGE_JSON_DOCUMENT_SIZE);
+    DynamicJsonDocument newProp(SMALL_JSON_DOCUMENT_SIZE);
     auto error = deserializeJson(newProp, rawData);
     if (error) {
       sendErrorMsg(newProp, *client, 400, "Invalid json");
@@ -259,16 +288,20 @@ private:
     JsonObject data = dataVariant.as<JsonObject>();
 
     if (messageType == "setProperty") {
-      for (auto kv : data) {
-        ThingProperty *property = device->findProperty(kv.key().c_str());
-        if (property) {
-          setThingProperty(data, property);
-        }
+      for (JsonPair kv : data) {
+        device->setProperty(kv.key().c_str(), kv.value());
       }
     } else if (messageType == "requestAction") {
-      sendErrorMsg(newProp, *client, 400, "Not supported yet");
+      for (JsonPair kv : data) {
+        DynamicJsonDocument *action =
+            new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
+        String jsonStr;
+        serializeJson(kv.value(), jsonStr);
+        deserializeJson(*action, jsonStr);
+        device->requestAction(action);
+      }
     } else if (messageType == "addEventSubscription") {
-      for (auto kv : data) {
+      for (JsonPair kv : data) {
         ThingEvent *event = device->findEvent(kv.key().c_str());
         if (event) {
           device->addEventSubscription(client->id(), event->id);
@@ -341,9 +374,79 @@ private:
 
     DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
     JsonObject prop = doc.to<JsonObject>();
-    item->serialize(prop);
+    item->serializeValue(prop);
     serializeJson(prop, *response);
     request->send(response);
+  }
+
+  void handleThingActionGet(AsyncWebServerRequest *request,
+                            ThingDevice *device, ThingAction *action) {
+    if (!verifyHost(request)) {
+      return;
+    }
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
+
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeActionQueue(queue, action->id);
+    serializeJson(queue, *response);
+    request->send(response);
+  }
+
+  void handleThingActionPost(AsyncWebServerRequest *request,
+                             ThingDevice *device, ThingAction *action) {
+    if (!verifyHost(request)) {
+      return;
+    }
+
+    if (!b_has_body_data) {
+      request->send(422); // unprocessable entity (b/c no body)
+      return;
+    }
+
+    DynamicJsonDocument *newBuffer =
+        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
+    auto error = deserializeJson(*newBuffer, body_data);
+    if (error) { // unable to parse json
+      b_has_body_data = false;
+      memset(body_data, 0, sizeof(body_data));
+      request->send(500);
+      delete newBuffer;
+      return;
+    }
+
+    JsonObject newAction = newBuffer->as<JsonObject>();
+
+    if (!newAction.containsKey(action->id)) {
+      b_has_body_data = false;
+      memset(body_data, 0, sizeof(body_data));
+      request->send(422);
+      delete newBuffer;
+      return;
+    }
+
+    ThingActionObject *obj = device->requestAction(newBuffer);
+
+    if (obj == nullptr) {
+      b_has_body_data = false;
+      memset(body_data, 0, sizeof(body_data));
+      request->send(500);
+      delete newBuffer;
+      return;
+    }
+
+    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
+    JsonObject item = respBuffer.to<JsonObject>();
+    obj->serialize(item, device->id);
+    String jsonStr;
+    serializeJson(item, jsonStr);
+    AsyncWebServerResponse *response =
+        request->beginResponse(201, "application/json", jsonStr);
+    request->send(response);
+
+    b_has_body_data = false;
+    memset(body_data, 0, sizeof(body_data));
   }
 
   void handleThingEventGet(AsyncWebServerRequest *request, ThingDevice *device,
@@ -363,6 +466,9 @@ private:
 
   void handleThingPropertiesGet(AsyncWebServerRequest *request,
                                 ThingItem *rootItem) {
+    if (!verifyHost(request)) {
+      return;
+    }
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
 
@@ -370,15 +476,88 @@ private:
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
-      item->serialize(prop);
+      item->serializeValue(prop);
       item = item->next;
     }
     serializeJson(prop, *response);
     request->send(response);
   }
 
+  void handleThingActionsGet(AsyncWebServerRequest *request,
+                             ThingDevice *device) {
+    if (!verifyHost(request)) {
+      return;
+    }
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
+
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeActionQueue(queue);
+    serializeJson(queue, *response);
+    request->send(response);
+  }
+
+  void handleThingActionsPost(AsyncWebServerRequest *request,
+                              ThingDevice *device) {
+    if (!verifyHost(request)) {
+      return;
+    }
+
+    if (!b_has_body_data) {
+      request->send(422); // unprocessable entity (b/c no body)
+      return;
+    }
+
+    DynamicJsonDocument *newBuffer =
+        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
+    auto error = deserializeJson(*newBuffer, body_data);
+    if (error) { // unable to parse json
+      b_has_body_data = false;
+      memset(body_data, 0, sizeof(body_data));
+      request->send(500);
+      delete newBuffer;
+      return;
+    }
+
+    JsonObject newAction = newBuffer->as<JsonObject>();
+
+    if (!newAction.size() != 1) {
+      b_has_body_data = false;
+      memset(body_data, 0, sizeof(body_data));
+      request->send(400);
+      delete newBuffer;
+      return;
+    }
+
+    ThingActionObject *obj = device->requestAction(newBuffer);
+
+    if (obj == nullptr) {
+      b_has_body_data = false;
+      memset(body_data, 0, sizeof(body_data));
+      request->send(500);
+      delete newBuffer;
+      return;
+    }
+
+    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
+    JsonObject item = respBuffer.to<JsonObject>();
+    obj->serialize(item, device->id);
+    String jsonStr;
+    serializeJson(item, jsonStr);
+    AsyncWebServerResponse *response =
+        request->beginResponse(201, "application/json", jsonStr);
+    request->send(response);
+
+    b_has_body_data = false;
+    memset(body_data, 0, sizeof(body_data));
+  }
+
   void handleThingEventsGet(AsyncWebServerRequest *request,
                             ThingDevice *device) {
+    if (!verifyHost(request)) {
+      return;
+    }
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
 
@@ -400,39 +579,8 @@ private:
     b_has_body_data = true;
   }
 
-  void setThingProperty(const JsonObject newProp, ThingProperty *property) {
-    const JsonVariant newValue = newProp[property->id];
-
-    switch (property->type) {
-    case NO_STATE: {
-      break;
-    }
-    case BOOLEAN: {
-      ThingDataValue value;
-      value.boolean = newValue.as<bool>();
-      property->setValue(value);
-      break;
-    }
-    case NUMBER: {
-      ThingDataValue value;
-      value.number = newValue.as<double>();
-      property->setValue(value);
-      break;
-    }
-    case INTEGER: {
-      ThingDataValue value;
-      value.integer = newValue.as<signed long long>();
-      property->setValue(value);
-      break;
-    }
-    case STRING:
-      *(property->getValue().string) = newValue.as<String>();
-      break;
-    }
-  }
-
   void handleThingPropertyPut(AsyncWebServerRequest *request,
-                              ThingProperty *property) {
+                              ThingDevice *device, ThingProperty *property) {
     if (!verifyHost(request)) {
       return;
     }
@@ -451,7 +599,14 @@ private:
     }
     JsonObject newProp = newBuffer.as<JsonObject>();
 
-    setThingProperty(newProp, property);
+    if (!newProp.containsKey(property->id)) {
+      b_has_body_data = false;
+      memset(body_data, 0, sizeof(body_data));
+      request->send(400);
+      return;
+    }
+
+    device->setProperty(property->id.c_str(), newProp[property->id]);
 
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
