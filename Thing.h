@@ -21,20 +21,22 @@
 
 #include <ArduinoJson.h>
 
-enum ThingPropertyType { NO_STATE, BOOLEAN, NUMBER, INTEGER, STRING };
+enum ThingDataType { NO_STATE, BOOLEAN, NUMBER, INTEGER, STRING };
+typedef ThingDataType ThingPropertyType;
 
-union ThingPropertyValue {
+union ThingDataValue {
   bool boolean;
   double number;
   signed long long integer;
   String *string;
 };
+typedef ThingDataValue ThingPropertyValue;
 
 class ThingItem {
 public:
   String id;
   String description;
-  ThingPropertyType type;
+  ThingDataType type;
   String atType;
   ThingItem *next = nullptr;
 
@@ -45,11 +47,11 @@ public:
   double maximum = -1;
   double multipleOf = -1;
 
-  ThingItem(const char *id_, const char *description_, ThingPropertyType type_,
+  ThingItem(const char *id_, const char *description_, ThingDataType type_,
             const char *atType_)
       : id(id_), description(description_), type(type_), atType(atType_) {}
 
-  void setValue(ThingPropertyValue newValue) {
+  void setValue(ThingDataValue newValue) {
     this->value = newValue;
     this->hasChanged = true;
   }
@@ -58,13 +60,13 @@ public:
    * Returns the property value if it has been changed via {@link setValue}
    * since the last call or returns a nullptr.
    */
-  ThingPropertyValue *changedValueOrNull() {
-    ThingPropertyValue *v = this->hasChanged ? &this->value : nullptr;
+  ThingDataValue *changedValueOrNull() {
+    ThingDataValue *v = this->hasChanged ? &this->value : nullptr;
     this->hasChanged = false;
     return v;
   }
 
-  ThingPropertyValue getValue() { return this->value; }
+  ThingDataValue getValue() { return this->value; }
 
   void serialize(JsonObject prop) {
     switch (this->type) {
@@ -86,7 +88,7 @@ public:
   }
 
 private:
-  ThingPropertyValue value = {false};
+  ThingDataValue value = {false};
   bool hasChanged = false;
 };
 
@@ -94,12 +96,112 @@ class ThingProperty : public ThingItem {
 public:
   const char **propertyEnum = nullptr;
 
-  ThingProperty(const char *id_, const char *description_,
-                ThingPropertyType type_, const char *atType_)
+  ThingProperty(const char *id_, const char *description_, ThingDataType type_,
+                const char *atType_)
       : ThingItem(id_, description_, type_, atType_) {}
 };
 
+#ifndef WITHOUT_WS
+class EventSubscription {
+public:
+  uint32_t id;
+  EventSubscription *next;
+
+  EventSubscription(uint32_t id_) : id(id_) {}
+};
+
+class ThingEvent : public ThingItem {
+private:
+  EventSubscription *subscriptions = nullptr;
+
+public:
+  ThingEvent(const char *id_, const char *description_, ThingDataType type_,
+             const char *atType_)
+      : ThingItem(id_, description_, type_, atType_) {}
+
+  void addSubscription(uint32_t id) {
+    EventSubscription *sub = new EventSubscription(id);
+    sub->next = subscriptions;
+    subscriptions = sub;
+  }
+
+  void removeSubscription(uint32_t id) {
+    EventSubscription *curr = subscriptions;
+    EventSubscription *prev = nullptr;
+    while (curr != nullptr) {
+      if (curr->id == id) {
+        if (prev == nullptr) {
+          subscriptions = curr->next;
+        } else {
+          prev->next = curr->next;
+        }
+
+        delete curr;
+        return;
+      }
+
+      prev = curr;
+      curr = curr->next;
+    }
+  }
+
+  bool isSubscribed(uint32_t id) {
+    EventSubscription *curr = subscriptions;
+    while (curr != nullptr) {
+      if (curr->id == id) {
+        return true;
+      }
+
+      curr = curr->next;
+    }
+
+    return false;
+  }
+};
+#else
 using ThingEvent = ThingItem;
+#endif
+
+class ThingEventObject {
+public:
+  String name;
+  ThingDataType type;
+  ThingDataValue value = {false};
+  String timestamp;
+  ThingEventObject *next = nullptr;
+
+  ThingEventObject(const char *name_, ThingDataType type_,
+                   ThingDataValue value_)
+      : name(name_), type(type_), value(value_),
+        timestamp("1970-01-01T00:00:00+00:00") {}
+  ThingEventObject(const char *name_, ThingDataType type_,
+                   ThingDataValue value_, String timestamp_)
+      : name(name_), type(type_), value(value_), timestamp(timestamp_) {}
+
+  ThingDataValue getValue() { return this->value; }
+
+  void serialize(JsonObject obj) {
+    JsonObject data = obj.createNestedObject(name);
+    switch (this->type) {
+    case NO_STATE:
+      break;
+    case BOOLEAN:
+      data["data"] = this->getValue().boolean;
+      break;
+    case NUMBER:
+      data["data"] = this->getValue().number;
+      break;
+    case INTEGER:
+      data["data"] = this->getValue().integer;
+      break;
+    case STRING:
+      data["data"] = *this->getValue().string;
+      break;
+    }
+
+    data["timestamp"] = timestamp;
+  }
+};
 
 class ThingDevice {
 public:
@@ -113,6 +215,7 @@ public:
   ThingDevice *next = nullptr;
   ThingProperty *firstProperty = nullptr;
   ThingEvent *firstEvent = nullptr;
+  ThingEventObject *eventQueue = nullptr;
 
   ThingDevice(const char *_id, const char *_title, const char **_type)
       : id(_id), title(_title), type(_type) {}
@@ -123,6 +226,25 @@ public:
       delete ws;
 #endif
   }
+
+#ifndef WITHOUT_WS
+  void removeEventSubscriptions(uint32_t id) {
+    ThingEvent *event = firstEvent;
+    while (event != nullptr) {
+      event->removeSubscription(id);
+      event = (ThingEvent *)event->next;
+    }
+  }
+
+  void addEventSubscription(uint32_t id, String eventName) {
+    ThingEvent *event = findEvent(eventName.c_str());
+    if (!event) {
+      return;
+    }
+
+    event->addSubscription(id);
+  }
+#endif
 
   ThingProperty *findProperty(const char *id) {
     ThingProperty *p = this->firstProperty;
@@ -139,9 +261,49 @@ public:
     firstProperty = property;
   }
 
+  ThingEvent *findEvent(const char *id) {
+    ThingEvent *e = this->firstEvent;
+    while (e) {
+      if (!strcmp(e->id.c_str(), id))
+        return e;
+      e = (ThingEvent *)e->next;
+    }
+    return nullptr;
+  }
+
   void addEvent(ThingEvent *event) {
     event->next = firstEvent;
     firstEvent = event;
+  }
+
+  void queueEventObject(ThingEventObject *obj) {
+    obj->next = eventQueue;
+    eventQueue = obj;
+
+#ifndef WITHOUT_WS
+    ThingEvent *event = findEvent(obj->name.c_str());
+    if (!event) {
+      return;
+    }
+
+    // * Send events as defined in "4.7 event message"
+    DynamicJsonDocument message(256);
+    message["messageType"] = "event";
+    JsonObject data = message.createNestedObject("data");
+    obj->serialize(data);
+    String jsonStr;
+    serializeJson(message, jsonStr);
+
+    // Inform all subscribed ws clients about events
+    for (AsyncWebSocketClient *client :
+         ((AsyncWebSocket *)this->ws)->getClients()) {
+      uint32_t id = client->id();
+
+      if (event->isSubscribed(id)) {
+        ((AsyncWebSocket *)this->ws)->text(id, jsonStr);
+      }
+    }
+#endif
   }
 
   void serialize(JsonObject descr
@@ -285,6 +447,26 @@ public:
       inline_links_prop["href"] = basePath + item->id;
 
       item = item->next;
+    }
+  }
+
+  void serializeEventQueue(JsonArray array) {
+    ThingEventObject *curr = eventQueue;
+    while (curr != nullptr) {
+      JsonObject event = array.createNestedObject();
+      curr->serialize(event);
+      curr = curr->next;
+    }
+  }
+
+  void serializeEventQueue(JsonArray array, String name) {
+    ThingEventObject *curr = eventQueue;
+    while (curr != nullptr) {
+      if (curr->name == name) {
+        JsonObject event = array.createNestedObject();
+        curr->serialize(event);
+      }
+      curr = curr->next;
     }
   }
 };

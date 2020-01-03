@@ -74,8 +74,8 @@ public:
       while (property != nullptr) {
         String propertyBase = deviceBase + "/properties/" + property->id;
         this->server.on(propertyBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingGetItem, this,
-                                  std::placeholders::_1, property));
+                        std::bind(&WebThingAdapter::handleThingPropertyGet,
+                                  this, std::placeholders::_1, property));
         this->server.on(propertyBase.c_str(), HTTP_PUT,
                         std::bind(&WebThingAdapter::handleThingPropertyPut,
                                   this, std::placeholders::_1, property),
@@ -92,17 +92,18 @@ public:
       while (event != nullptr) {
         String eventBase = deviceBase + "/events/" + event->id;
         this->server.on(eventBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingGetItem, this,
-                                  std::placeholders::_1, event));
+                        std::bind(&WebThingAdapter::handleThingEventGet, this,
+                                  std::placeholders::_1, device, event));
         event = (ThingEvent *)event->next;
       }
 
       this->server.on((deviceBase + "/properties").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingGetAll, this,
-                                std::placeholders::_1, device->firstProperty));
+                      std::bind(&WebThingAdapter::handleThingPropertiesGet,
+                                this, std::placeholders::_1,
+                                device->firstProperty));
       this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingGetAll, this,
-                                std::placeholders::_1, device->firstEvent));
+                      std::bind(&WebThingAdapter::handleThingEventsGet, this,
+                                std::placeholders::_1, device));
       this->server.on(deviceBase.c_str(), HTTP_GET,
                       std::bind(&WebThingAdapter::handleThing, this,
                                 std::placeholders::_1, device));
@@ -114,16 +115,15 @@ public:
   }
 
 #ifndef WITHOUT_WS
-  void sendChangedPropsOrEvents(ThingDevice *device, const char *type,
-                                ThingItem *rootItem) {
+  void sendChangedProperties(ThingDevice *device) {
     // Prepare one buffer per device
     DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-    message["messageType"] = type;
+    message["messageType"] = "propertyStatus";
     JsonObject prop = message.createNestedObject("data");
     bool dataToSend = false;
-    ThingItem *item = rootItem;
+    ThingItem *item = device->firstProperty;
     while (item != nullptr) {
-      ThingPropertyValue *value = item->changedValueOrNull();
+      ThingDataValue *value = item->changedValueOrNull();
       if (value) {
         dataToSend = true;
         item->serialize(prop);
@@ -145,13 +145,10 @@ public:
 #endif
 #ifndef WITHOUT_WS
     // * Send changed properties as defined in "4.5 propertyStatus message"
-    // * Send events as defined in "4.7 event message"
     // Do this by looping over all devices and properties/events
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
-      sendChangedPropsOrEvents(device, "propertyStatus",
-                               device->firstProperty);
-      sendChangedPropsOrEvents(device, "event", device->firstEvent);
+      sendChangedProperties(device);
       device = device->next;
     }
 #endif
@@ -221,7 +218,12 @@ private:
   void handleWS(AsyncWebSocket *server, AsyncWebSocketClient *client,
                 AwsEventType type, void *arg, uint8_t *rawData, size_t len,
                 ThingDevice *device) {
-    // Ignore all except data packets
+    if (type == WS_EVT_DISCONNECT || type == WS_EVT_ERROR) {
+      device->removeEventSubscriptions(client->id());
+      return;
+    }
+
+    // Ignore all others except data packets
     if (type != WS_EVT_DATA)
       return;
 
@@ -266,8 +268,12 @@ private:
     } else if (messageType == "requestAction") {
       sendErrorMsg(newProp, *client, 400, "Not supported yet");
     } else if (messageType == "addEventSubscription") {
-      // We report back all property state changes. We'd require a map
-      // of subscribed properties per websocket connection otherwise
+      for (auto kv : data) {
+        ThingEvent *event = device->findEvent(kv.key().c_str());
+        if (event) {
+          device->addEventSubscription(client->id(), event->id);
+        }
+      }
     }
   }
 #endif
@@ -325,7 +331,8 @@ private:
     request->send(response);
   }
 
-  void handleThingGetItem(AsyncWebServerRequest *request, ThingItem *item) {
+  void handleThingPropertyGet(AsyncWebServerRequest *request,
+                              ThingItem *item) {
     if (!verifyHost(request)) {
       return;
     }
@@ -339,7 +346,23 @@ private:
     request->send(response);
   }
 
-  void handleThingGetAll(AsyncWebServerRequest *request, ThingItem *rootItem) {
+  void handleThingEventGet(AsyncWebServerRequest *request, ThingDevice *device,
+                           ThingItem *item) {
+    if (!verifyHost(request)) {
+      return;
+    }
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
+
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeEventQueue(queue, item->id);
+    serializeJson(queue, *response);
+    request->send(response);
+  }
+
+  void handleThingPropertiesGet(AsyncWebServerRequest *request,
+                                ThingItem *rootItem) {
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
 
@@ -351,6 +374,18 @@ private:
       item = item->next;
     }
     serializeJson(prop, *response);
+    request->send(response);
+  }
+
+  void handleThingEventsGet(AsyncWebServerRequest *request,
+                            ThingDevice *device) {
+    AsyncResponseStream *response =
+        request->beginResponseStream("application/json");
+
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeEventQueue(queue);
+    serializeJson(queue, *response);
     request->send(response);
   }
 
@@ -373,19 +408,19 @@ private:
       break;
     }
     case BOOLEAN: {
-      ThingPropertyValue value;
+      ThingDataValue value;
       value.boolean = newValue.as<bool>();
       property->setValue(value);
       break;
     }
     case NUMBER: {
-      ThingPropertyValue value;
+      ThingDataValue value;
       value.number = newValue.as<double>();
       property->setValue(value);
       break;
     }
     case INTEGER: {
-      ThingPropertyValue value;
+      ThingDataValue value;
       value.integer = newValue.as<signed long long>();
       property->setValue(value);
       break;

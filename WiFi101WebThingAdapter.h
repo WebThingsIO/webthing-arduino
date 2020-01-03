@@ -288,16 +288,16 @@ private:
           }
           return;
         } else if (uri == deviceBase + "/properties") {
-          handleThingGetAll(device->firstProperty);
+          handleThingPropertiesGet(device->firstProperty);
         } else if (uri == deviceBase + "/events") {
-          handleThingGetAll(device->firstEvent);
+          handleThingEventsGet(device);
         } else {
           ThingProperty *property = device->firstProperty;
           while (property != nullptr) {
             String propertyBase = deviceBase + "/properties/" + property->id;
             if (uri == propertyBase) {
               if (method == HTTP_GET || method == HTTP_OPTIONS) {
-                handleThingGetItem(property);
+                handleThingPropertyGet(property);
               } else if (method == HTTP_PUT) {
                 handleThingPropertyPut(property);
               } else {
@@ -306,6 +306,20 @@ private:
               return;
             }
             property = (ThingProperty *)property->next;
+          }
+
+          ThingEvent *event = device->firstEvent;
+          while (event != nullptr) {
+            String eventBase = deviceBase + "/events/" + event->id;
+            if (uri == eventBase) {
+              if (method == HTTP_GET || method == HTTP_OPTIONS) {
+                handleThingEventGet(device, event);
+              } else {
+                handleError();
+              }
+              return;
+            }
+            event = (ThingEvent *)event->next;
           }
         }
       }
@@ -356,7 +370,7 @@ private:
     client.stop();
   }
 
-  void handleThingGetItem(ThingItem *item) {
+  void handleThingPropertyGet(ThingItem *item) {
     sendOk();
     sendHeaders();
 
@@ -368,7 +382,19 @@ private:
     client.stop();
   }
 
-  void handleThingGetAll(ThingItem *rootItem) {
+  void handleThingEventGet(ThingDevice *device, ThingItem *item) {
+    sendOk();
+    sendHeaders();
+
+    DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeEventQueue(queue, item->id);
+    serializeJson(queue, client);
+    delay(1);
+    client.stop();
+  }
+
+  void handleThingPropertiesGet(ThingItem *rootItem) {
     sendOk();
     sendHeaders();
 
@@ -384,6 +410,18 @@ private:
     client.stop();
   }
 
+  void handleThingEventsGet(ThingDevice *device) {
+    sendOk();
+    sendHeaders();
+
+    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+    JsonArray queue = doc.to<JsonArray>();
+    device->serializeEventQueue(queue);
+    serializeJson(queue, client);
+    delay(1);
+    client.stop();
+  }
+
   void setThingProperty(const JsonObject newProp, ThingProperty *property) {
     const JsonVariant newValue = newProp[property->id];
 
@@ -392,19 +430,19 @@ private:
       break;
     }
     case BOOLEAN: {
-      ThingPropertyValue value;
+      ThingDataValue value;
       value.boolean = newValue.as<bool>();
       property->setValue(value);
       break;
     }
     case NUMBER: {
-      ThingPropertyValue value;
+      ThingDataValue value;
       value.number = newValue.as<double>();
       property->setValue(value);
       break;
     }
     case INTEGER: {
-      ThingPropertyValue value;
+      ThingDataValue value;
       value.integer = newValue.as<signed long long>();
       property->setValue(value);
       break;
