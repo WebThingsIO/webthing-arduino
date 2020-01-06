@@ -21,6 +21,22 @@
 
 #include <ArduinoJson.h>
 
+#ifndef LARGE_JSON_DOCUMENT_SIZE
+#ifdef LARGE_JSON_BUFFERS
+#define LARGE_JSON_DOCUMENT_SIZE 4096
+#else
+#define LARGE_JSON_DOCUMENT_SIZE 1024
+#endif
+#endif
+
+#ifndef SMALL_JSON_DOCUMENT_SIZE
+#ifdef LARGE_JSON_BUFFERS
+#define SMALL_JSON_DOCUMENT_SIZE 1024
+#else
+#define SMALL_JSON_DOCUMENT_SIZE 256
+#endif
+#endif
+
 enum ThingDataType { NO_STATE, BOOLEAN, NUMBER, INTEGER, STRING };
 typedef ThingDataType ThingPropertyType;
 
@@ -32,7 +48,105 @@ union ThingDataValue {
 };
 typedef ThingDataValue ThingPropertyValue;
 
+class ThingActionObject {
+private:
+  void (*start_fn)(const JsonVariant &);
+  void (*cancel_fn)();
+
+#ifndef WITHOUT_WS
+  std::function<void(ThingActionObject *)> notify_fn;
+#endif
+
+public:
+  String name;
+  DynamicJsonDocument *actionRequest = nullptr;
+  String timeRequested;
+  String timeCompleted;
+  String status;
+  String id;
+  ThingActionObject *next = nullptr;
+
+  ThingActionObject(const char *name_, DynamicJsonDocument *actionRequest_,
+                    void (*start_fn_)(const JsonVariant &),
+                    void (*cancel_fn_)())
+      : start_fn(start_fn_), cancel_fn(cancel_fn_), name(name_),
+        actionRequest(actionRequest_),
+        timeRequested("1970-01-01T00:00:00+00:00"), status("created") {
+    generateId();
+  }
+
+#ifndef WITHOUT_WS
+  void setNotifyFunction(std::function<void(ThingActionObject *)> notify_fn_) {
+    notify_fn = notify_fn_;
+  }
+#endif
+
+  void generateId() {
+    for (uint8_t i = 0; i < 16; ++i) {
+      char c = (char)random('0', 'g');
+
+      if (c > '9' && c < 'a') {
+        --i;
+        continue;
+      }
+
+      id += c;
+    }
+  }
+
+  void serialize(JsonObject obj, String deviceId) {
+    JsonObject data = obj.createNestedObject(name);
+
+    JsonObject actionObj = actionRequest->as<JsonObject>();
+    JsonObject inner = actionObj[name];
+    data["input"] = inner["input"];
+
+    data["status"] = status;
+    data["timeRequested"] = timeRequested;
+
+    if (timeCompleted != "") {
+      data["timeCompleted"] = timeCompleted;
+    }
+
+    data["href"] = "/things/" + deviceId + "/actions/" + name + "/" + id;
+  }
+
+  void setStatus(const char *s) {
+    status = s;
+
+#ifndef WITHOUT_WS
+    if (notify_fn != nullptr) {
+      notify_fn(this);
+    }
+#endif
+  }
+
+  void start() {
+    setStatus("pending");
+
+    JsonObject actionObj = actionRequest->as<JsonObject>();
+    JsonObject inner = actionObj[name];
+    start_fn(inner["input"]);
+
+    finish();
+  }
+
+  void cancel() {
+    if (cancel_fn != nullptr) {
+      cancel_fn();
+    }
+  }
+
+  void finish() {
+    timeCompleted = "1970-01-01T00:00:00+00:00";
+    setStatus("completed");
+  }
+};
+
 class ThingAction {
+private:
+  ThingActionObject *(*generator_fn)(DynamicJsonDocument *);
+
 public:
   String id;
   String title;
@@ -41,12 +155,23 @@ public:
   JsonObject *input;
   ThingAction *next = nullptr;
 
-  ThingAction(const char *id_) : id(id_) {}
-  ThingAction(const char *id_, JsonObject *input_) : id(id_), input(input_) {}
+  ThingAction(const char *id_,
+              ThingActionObject *(*generator_fn_)(DynamicJsonDocument *))
+      : generator_fn(generator_fn_), id(id_) {}
+
+  ThingAction(const char *id_, JsonObject *input_,
+              ThingActionObject *(*generator_fn_)(DynamicJsonDocument *))
+      : generator_fn(generator_fn_), id(id_), input(input_) {}
+
   ThingAction(const char *id_, const char *title_, const char *description_,
-              const char *type_, JsonObject *input_)
-      : id(id_), title(title_), description(description_), type(type_),
-        input(input_) {}
+              const char *type_, JsonObject *input_,
+              ThingActionObject *(*generator_fn_)(DynamicJsonDocument *))
+      : generator_fn(generator_fn_), id(id_), title(title_),
+        description(description_), type(type_), input(input_) {}
+
+  ThingActionObject *create(DynamicJsonDocument *actionRequest) {
+    return generator_fn(actionRequest);
+  }
 
   void serialize(JsonObject obj, String deviceId) {
     if (title != "") {
@@ -74,40 +199,6 @@ public:
     JsonArray inline_links = obj.createNestedArray("links");
     JsonObject inline_links_prop = inline_links.createNestedObject();
     inline_links_prop["href"] = "/things/" + deviceId + "/actions/" + id;
-  }
-};
-
-class ThingActionObject {
-public:
-  String name;
-  JsonVariant *input = nullptr;
-  String timeRequested;
-  String timeCompleted;
-  String status;
-  String id;
-  ThingActionObject *next = nullptr;
-
-  ThingActionObject(const char *name_)
-      : name(name_), timeRequested("1970-01-01T00:00:00+00:00") {}
-  ThingActionObject(const char *name_, JsonVariant *input_)
-      : name(name_), input(input_),
-        timeRequested("1970-01-01T00:00:00+00:00") {}
-
-  void serialize(JsonObject obj, String deviceId) {
-    JsonObject data = obj.createNestedObject(name);
-
-    if (input != nullptr) {
-      data["input"] = input;
-    }
-
-    data["status"] = status;
-    data["timeRequested"] = timeRequested;
-
-    if (timeCompleted != "") {
-      data["timeCompleted"] = timeCompleted;
-    }
-
-    data["href"] = "/things/" + deviceId + "/actions/" + name + "/" + id;
   }
 };
 
@@ -328,6 +419,7 @@ public:
                    ThingDataValue value_)
       : name(name_), type(type_), value(value_),
         timestamp("1970-01-01T00:00:00+00:00") {}
+
   ThingEventObject(const char *name_, ThingDataType type_,
                    ThingDataValue value_, String timestamp_)
       : name(name_), type(type_), value(value_), timestamp(timestamp_) {}
@@ -400,6 +492,17 @@ public:
 
     event->addSubscription(id);
   }
+
+  void sendActionStatus(ThingActionObject *action) {
+    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+    message["messageType"] = "actionStatus";
+    JsonObject prop = message.createNestedObject("data");
+    action->serialize(prop, id);
+    String jsonStr;
+    serializeJson(message, jsonStr);
+    // Inform all connected ws clients about action statuses
+    ((AsyncWebSocket *)ws)->textAll(jsonStr);
+  }
 #endif
 
   ThingProperty *findProperty(const char *id) {
@@ -423,6 +526,16 @@ public:
       if (!strcmp(a->id.c_str(), id))
         return a;
       a = (ThingAction *)a->next;
+    }
+    return nullptr;
+  }
+
+  ThingActionObject *findActionObject(const char *id) {
+    ThingActionObject *a = this->actionQueue;
+    while (a) {
+      if (!strcmp(a->id.c_str(), id))
+        return a;
+      a = a->next;
     }
     return nullptr;
   }
@@ -482,8 +595,49 @@ public:
     }
   }
 
-  ThingActionObject *requestAction(DynamicJsonDocument *action) {
-    return nullptr;
+  ThingActionObject *requestAction(DynamicJsonDocument *actionRequest) {
+    JsonObject actionObj = actionRequest->as<JsonObject>();
+
+    // There should only be one key/value pair
+    JsonObject::iterator kv = actionObj.begin();
+    if (kv == actionObj.end()) {
+      return nullptr;
+    }
+
+    ThingAction *action = findAction(kv->key().c_str());
+    if (action == nullptr) {
+      return nullptr;
+    }
+
+    ThingActionObject *obj = action->create(actionRequest);
+    if (obj == nullptr) {
+      return nullptr;
+    }
+
+    queueActionObject(obj);
+    return obj;
+  }
+
+  void removeAction(String id) {
+    ThingActionObject *curr = actionQueue;
+    ThingActionObject *prev = nullptr;
+    while (curr != nullptr) {
+      if (curr->id == id) {
+        if (prev == nullptr) {
+          actionQueue = curr->next;
+        } else {
+          prev->next = curr->next;
+        }
+
+        curr->cancel();
+        delete curr->actionRequest;
+        delete curr;
+        return;
+      }
+
+      prev = curr;
+      curr = curr->next;
+    }
   }
 
   void queueActionObject(ThingActionObject *obj) {
@@ -502,7 +656,7 @@ public:
     }
 
     // * Send events as defined in "4.7 event message"
-    DynamicJsonDocument message(256);
+    DynamicJsonDocument message(SMALL_JSON_DOCUMENT_SIZE);
     message["messageType"] = "event";
     JsonObject data = message.createNestedObject("data");
     obj->serialize(data);
@@ -521,12 +675,7 @@ public:
 #endif
   }
 
-  void serialize(JsonObject descr
-#ifndef WITHOUT_WS
-                 ,
-                 String ip, uint16_t port
-#endif
-  ) {
+  void serialize(JsonObject descr, String ip, uint16_t port) {
     descr["id"] = this->id;
     descr["title"] = this->title;
     descr["@context"] = "https://iot.mozilla.org/schemas";
@@ -534,7 +683,13 @@ public:
     if (this->description != "") {
       descr["description"] = this->description;
     }
-    // TODO: descr["base"] = ???
+    if (port != 80) {
+      char buffer[33];
+      itoa(port, buffer, 10);
+      descr["base"] = "http://" + ip + ":" + buffer + "/";
+    } else {
+      descr["base"] = "http://" + ip + "/";
+    }
 
     JsonObject securityDefinitions =
         descr.createNestedObject("securityDefinitions");
@@ -572,9 +727,15 @@ public:
     {
       JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "alternate";
-      char buffer[33];
-      itoa(port, buffer, 10);
-      links_prop["href"] = "ws://" + ip + ":" + buffer + "/things/" + this->id;
+
+      if (port != 80) {
+        char buffer[33];
+        itoa(port, buffer, 10);
+        links_prop["href"] =
+            "ws://" + ip + ":" + buffer + "/things/" + this->id;
+      } else {
+        links_prop["href"] = "ws://" + ip + "/things/" + this->id;
+      }
     }
 #endif
 

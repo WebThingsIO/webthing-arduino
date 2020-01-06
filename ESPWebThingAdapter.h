@@ -57,7 +57,7 @@ public:
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods",
-                                         "PUT, GET, OPTIONS");
+                                         "GET, POST, PUT, DELETE, OPTIONS");
 
     this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this,
                                       std::placeholders::_1));
@@ -103,6 +103,10 @@ public:
                                   std::placeholders::_1, std::placeholders::_2,
                                   std::placeholders::_3, std::placeholders::_4,
                                   std::placeholders::_5));
+        this->server.on(actionBase.c_str(), HTTP_DELETE,
+                        std::bind(&WebThingAdapter::handleThingActionDelete,
+                                  this, std::placeholders::_1, device,
+                                  action));
         action = (ThingAction *)action->next;
       }
 
@@ -191,8 +195,9 @@ public:
       this->lastDevice->next = device;
       this->lastDevice = device;
     }
-// Initiate the websocket instance
+
 #ifndef WITHOUT_WS
+    // Initiate the websocket instance
     AsyncWebSocket *ws = new AsyncWebSocket("/things/" + device->id);
     device->ws = ws;
     // AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType
@@ -245,8 +250,8 @@ private:
   }
 
   void handleWS(AsyncWebSocket *server, AsyncWebSocketClient *client,
-                AwsEventType type, void *arg, uint8_t *rawData, size_t len,
-                ThingDevice *device) {
+                AwsEventType type, void *arg, const uint8_t *rawData,
+                size_t len, ThingDevice *device) {
     if (type == WS_EVT_DISCONNECT || type == WS_EVT_ERROR) {
       device->removeEventSubscriptions(client->id());
       return;
@@ -272,7 +277,7 @@ private:
 
     // Parse request
     DynamicJsonDocument newProp(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(newProp, rawData);
+    auto error = deserializeJson(newProp, rawData, len);
     if (error) {
       sendErrorMsg(newProp, *client, 400, "Invalid json");
       return;
@@ -293,12 +298,26 @@ private:
       }
     } else if (messageType == "requestAction") {
       for (JsonPair kv : data) {
-        DynamicJsonDocument *action =
+        DynamicJsonDocument *actionRequest =
             new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-        String jsonStr;
-        serializeJson(kv.value(), jsonStr);
-        deserializeJson(*action, jsonStr);
-        device->requestAction(action);
+
+        JsonObject actionObj = actionRequest->to<JsonObject>();
+        JsonObject nested = actionObj.createNestedObject(kv.key());
+
+        for (JsonPair kvInner : kv.value().as<JsonObject>()) {
+          nested[kvInner.key()] = kvInner.value();
+        }
+
+        ThingActionObject *obj = device->requestAction(actionRequest);
+        if (obj != nullptr) {
+#ifndef WITHOUT_WS
+          obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus,
+                                           device, std::placeholders::_1));
+          device->sendActionStatus(obj);
+#endif
+
+          obj->start();
+        }
       }
     } else if (messageType == "addEventSubscription") {
       for (JsonPair kv : data) {
@@ -330,12 +349,7 @@ private:
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
-      device->serialize(descr
-#ifndef WITHOUT_WS
-                        ,
-                        ip, port
-#endif
-      );
+      device->serialize(descr, ip, port);
       descr["href"] = "/things/" + device->id;
       device = device->next;
     }
@@ -353,12 +367,7 @@ private:
 
     DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
     JsonObject descr = buf.to<JsonObject>();
-    device->serialize(descr
-#ifndef WITHOUT_WS
-                      ,
-                      ip, port
-#endif
-    );
+    device->serialize(descr, ip, port);
 
     serializeJson(descr, *response);
     request->send(response);
@@ -384,14 +393,65 @@ private:
     if (!verifyHost(request)) {
       return;
     }
-    AsyncResponseStream *response =
-        request->beginResponseStream("application/json");
 
-    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray queue = doc.to<JsonArray>();
-    device->serializeActionQueue(queue, action->id);
-    serializeJson(queue, *response);
-    request->send(response);
+    String url = request->url();
+    String base = "/things/" + device->id + "/actions/" + action->id;
+    if (url == base || url == base + "/") {
+      AsyncResponseStream *response =
+          request->beginResponseStream("application/json");
+      DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+      JsonArray queue = doc.to<JsonArray>();
+      device->serializeActionQueue(queue, action->id);
+      serializeJson(queue, *response);
+      request->send(response);
+    } else {
+      String actionId = url.substring(base.length() + 1);
+      const char *actionIdC = actionId.c_str();
+      const char *slash = strchr(actionIdC, '/');
+
+      if (slash) {
+        actionId = actionId.substring(0, slash - actionIdC);
+      }
+
+      ThingActionObject *obj = device->findActionObject(actionId.c_str());
+      if (obj == nullptr) {
+        request->send(404);
+        return;
+      }
+
+      AsyncResponseStream *response =
+          request->beginResponseStream("application/json");
+      DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
+      JsonObject o = doc.to<JsonObject>();
+      obj->serialize(o, device->id);
+      serializeJson(o, *response);
+      request->send(response);
+    }
+  }
+
+  void handleThingActionDelete(AsyncWebServerRequest *request,
+                               ThingDevice *device, ThingAction *action) {
+    if (!verifyHost(request)) {
+      return;
+    }
+
+    String url = request->url();
+    String base = "/things/" + device->id + "/actions/" + action->id;
+    if (url == base || url == base + "/") {
+      request->send(404);
+      return;
+    }
+
+    String actionId = url.substring(base.length() + 1);
+    const char *actionIdC = actionId.c_str();
+    const char *slash = strchr(actionIdC, '/');
+
+    if (slash) {
+      actionId = actionId.substring(0, slash - actionIdC);
+    }
+
+    device->removeAction(actionId);
+    request->send(204);
   }
 
   void handleThingActionPost(AsyncWebServerRequest *request,
@@ -407,7 +467,7 @@ private:
 
     DynamicJsonDocument *newBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, body_data);
+    auto error = deserializeJson(*newBuffer, (const char *)body_data);
     if (error) { // unable to parse json
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
@@ -421,7 +481,7 @@ private:
     if (!newAction.containsKey(action->id)) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(422);
+      request->send(400);
       delete newBuffer;
       return;
     }
@@ -436,6 +496,11 @@ private:
       return;
     }
 
+#ifndef WITHOUT_WS
+    obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus, device,
+                                     std::placeholders::_1));
+#endif
+
     DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
     JsonObject item = respBuffer.to<JsonObject>();
     obj->serialize(item, device->id);
@@ -447,6 +512,8 @@ private:
 
     b_has_body_data = false;
     memset(body_data, 0, sizeof(body_data));
+
+    obj->start();
   }
 
   void handleThingEventGet(AsyncWebServerRequest *request, ThingDevice *device,
@@ -511,7 +578,7 @@ private:
 
     DynamicJsonDocument *newBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, body_data);
+    auto error = deserializeJson(*newBuffer, (const char *)body_data);
     if (error) { // unable to parse json
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
@@ -522,7 +589,7 @@ private:
 
     JsonObject newAction = newBuffer->as<JsonObject>();
 
-    if (!newAction.size() != 1) {
+    if (newAction.size() != 1) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       request->send(400);
@@ -540,6 +607,11 @@ private:
       return;
     }
 
+#ifndef WITHOUT_WS
+    obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus, device,
+                                     std::placeholders::_1));
+#endif
+
     DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
     JsonObject item = respBuffer.to<JsonObject>();
     obj->serialize(item, device->id);
@@ -551,6 +623,8 @@ private:
 
     b_has_body_data = false;
     memset(body_data, 0, sizeof(body_data));
+
+    obj->start();
   }
 
   void handleThingEventsGet(AsyncWebServerRequest *request,

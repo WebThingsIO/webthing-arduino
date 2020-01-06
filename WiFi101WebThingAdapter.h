@@ -45,7 +45,14 @@
 
 static const bool DEBUG = false;
 
-enum HTTPMethod { HTTP_ANY, HTTP_GET, HTTP_PUT, HTTP_POST, HTTP_OPTIONS };
+enum HTTPMethod {
+  HTTP_ANY,
+  HTTP_GET,
+  HTTP_PUT,
+  HTTP_POST,
+  HTTP_DELETE,
+  HTTP_OPTIONS
+};
 
 enum ReadState {
   STATE_READ_METHOD,
@@ -131,6 +138,8 @@ public:
           method = HTTP_POST;
         } else if (methodRaw == "PUT") {
           method = HTTP_PUT;
+        } else if (methodRaw == "DELETE") {
+          method = HTTP_DELETE;
         } else if (methodRaw == "OPTIONS") {
           method = HTTP_OPTIONS;
         } else {
@@ -341,6 +350,16 @@ private:
                 handleError();
               }
               return;
+            } else if (uri.startsWith(actionBase + "/") &&
+                       uri.length() > (actionBase.length() + 1)) {
+              if (method == HTTP_GET || method == HTTP_OPTIONS) {
+                handleThingActionIdGet(device, action);
+              } else if (method == HTTP_DELETE) {
+                handleThingActionIdDelete(device, action);
+              } else {
+                handleError();
+              }
+              return;
             }
             action = action->next;
           }
@@ -369,9 +388,12 @@ private:
 
   void sendCreated() { client.println("HTTP/1.1 201 Created"); }
 
+  void sendNoContent() { client.println("HTTP/1.1 204 No Content"); }
+
   void sendHeaders() {
     client.println("Access-Control-Allow-Origin: *");
-    client.println("Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS");
+    client.println(
+        "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     client.println("Content-Type: application/json");
     client.println("Connection: close");
     client.println();
@@ -386,7 +408,7 @@ private:
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
       JsonObject descr = things.createNestedObject();
-      device->serialize(descr);
+      device->serialize(descr, ip, port);
       descr["href"] = "/things/" + device->id;
       device = device->next;
     }
@@ -402,7 +424,7 @@ private:
 
     DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
     JsonObject descr = buf.to<JsonObject>();
-    device->serialize(descr);
+    device->serialize(descr, ip, port);
 
     serializeJson(descr, client);
     delay(1);
@@ -431,6 +453,48 @@ private:
     serializeJson(queue, client);
     delay(1);
     client.stop();
+  }
+
+  void handleThingActionIdGet(ThingDevice *device, ThingAction *action) {
+    String base = "/things/" + device->id + "/actions/" + action->id;
+    String actionId = uri.substring(base.length() + 1);
+    const char *actionIdC = actionId.c_str();
+    const char *slash = strchr(actionIdC, '/');
+
+    if (slash) {
+      actionId = actionId.substring(0, slash - actionIdC);
+    }
+
+    ThingActionObject *obj = device->findActionObject(actionId.c_str());
+    if (obj == nullptr) {
+      handleError();
+      return;
+    }
+
+    sendOk();
+    sendHeaders();
+
+    DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
+    JsonObject o = doc.to<JsonObject>();
+    obj->serialize(o, device->id);
+    serializeJson(o, client);
+    delay(1);
+    client.stop();
+  }
+
+  void handleThingActionIdDelete(ThingDevice *device, ThingAction *action) {
+    String base = "/things/" + device->id + "/actions/" + action->id;
+    String actionId = uri.substring(base.length() + 1);
+    const char *actionIdC = actionId.c_str();
+    const char *slash = strchr(actionIdC, '/');
+
+    if (slash) {
+      actionId = actionId.substring(0, slash - actionIdC);
+    }
+
+    device->removeAction(actionId);
+    sendNoContent();
+    sendHeaders();
   }
 
   void handleThingActionPost(ThingDevice *device, ThingAction *action) {
@@ -468,6 +532,8 @@ private:
     serializeJson(item, client);
     delay(1);
     client.stop();
+
+    obj->start();
   }
 
   void handleThingEventGet(ThingDevice *device, ThingItem *item) {
@@ -522,7 +588,7 @@ private:
 
     JsonObject newAction = newBuffer->as<JsonObject>();
 
-    if (!newAction.size() != 1) {
+    if (newAction.size() != 1) {
       handleError();
       delete newBuffer;
       return;
@@ -545,6 +611,8 @@ private:
     serializeJson(item, client);
     delay(1);
     client.stop();
+
+    obj->start();
   }
 
   void handleThingEventsGet(ThingDevice *device) {
