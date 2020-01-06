@@ -66,6 +66,7 @@ libraries to your project.
 #include "Thing.h"
 #include "WebThingAdapter.h"
 
+// TODO: Hardcode your wifi credentials here (and keep it private)
 const char *ssid = "public";
 const char *password = "";
 

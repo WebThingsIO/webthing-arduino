@@ -33,4 +33,5 @@ jobs:
       run: |
         platformio run --project-dir examples/PlatformIO/BME280
         platformio run --project-dir examples/PlatformIO/LED
+        platformio run --project-dir examples/PlatformIO/LEDLamp
         platformio run --project-dir examples/PlatformIO/TextDisplay
