@@ -8,7 +8,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-#include <stdio.h>
+#include <Arduino.h>
 #include <Thing.h>
 #include <EthernetWebThingAdapter.h>
 
@@ -28,7 +28,8 @@ int setupNetwork() {
   uint8_t ETHERNET_MAC[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
   uint8_t error = Ethernet.begin(ETHERNET_MAC);
   if (error == 0) {
-    printf("error: %s\n", __FUNCTION__);
+    Serial.print("error: ");
+    Serial.println(__FUNCTION__);
     return -1;
   }
   return 0;
