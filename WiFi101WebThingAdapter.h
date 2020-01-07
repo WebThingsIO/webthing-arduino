@@ -22,6 +22,7 @@
 
 #include <WiFiUdp.h>
 #include <ArduinoMDNS.h>
+
 #include <ArduinoJson.h>
 
 #define WITHOUT_WS 1
@@ -81,9 +82,11 @@ public:
   void begin() {
     name.toLowerCase();
 
+    String serviceName = name + "._webthing";
     mdns.begin(WiFi.localIP(), name.c_str());
-
-    mdns.addServiceRecord("_webthing", port, MDNSServiceTCP, "\x06path=/");
+    // \x06 is the length of the record
+    mdns.addServiceRecord(serviceName.c_str(), port, MDNSServiceTCP,
+                          "\x06path=/");
 
     server.begin();
   }

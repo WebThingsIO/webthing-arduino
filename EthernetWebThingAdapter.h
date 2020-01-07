@@ -93,9 +93,11 @@ public:
   void begin() {
     name.toLowerCase();
 #ifdef CONFIG_MDNS
+    String serviceName = name + "._webthing";
     mdns.begin(Ethernet.localIP(), name.c_str());
-
-    mdns.addServiceRecord("_webthing", port, MDNSServiceTCP, "\x06path=/");
+    // \x06 is the length of the record
+    mdns.addServiceRecord(serviceName.c_str(), port, MDNSServiceTCP,
+                          "\x06path=/");
 #endif
     server.begin();
   }
