@@ -322,12 +322,16 @@ private:
 };
 
 class ThingProperty : public ThingItem {
+private:
+  void (*callback)(ThingPropertyValue);
+
 public:
   const char **propertyEnum = nullptr;
 
   ThingProperty(const char *id_, const char *description_, ThingDataType type_,
-                const char *atType_)
-      : ThingItem(id_, description_, type_, atType_) {}
+                const char *atType_,
+                void (*callback_)(ThingPropertyValue) = nullptr)
+      : ThingItem(id_, description_, type_, atType_), callback(callback_) {}
 
   void serialize(JsonObject obj, String deviceId, String resourceType) {
     ThingItem::serialize(obj, deviceId, resourceType);
@@ -342,6 +346,12 @@ public:
         propEnum.add(*enumVal);
         enumVal++;
       }
+    }
+  }
+
+  void changed(ThingPropertyValue newValue) {
+    if (callback != nullptr) {
+      callback(newValue);
     }
   }
 };
@@ -575,22 +585,26 @@ public:
       ThingDataValue value;
       value.boolean = newValue.as<bool>();
       property->setValue(value);
+      property->changed(value);
       break;
     }
     case NUMBER: {
       ThingDataValue value;
       value.number = newValue.as<double>();
       property->setValue(value);
+      property->changed(value);
       break;
     }
     case INTEGER: {
       ThingDataValue value;
       value.integer = newValue.as<signed long long>();
       property->setValue(value);
+      property->changed(value);
       break;
     }
     case STRING:
       *(property->getValue().string) = newValue.as<String>();
+      property->changed(property->getValue());
       break;
     }
   }
