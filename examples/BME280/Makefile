@@ -42,6 +42,7 @@ ARDUINO_LIBS += Ethernet SPI
 ARDUINO_LIBS += ArduinoMDNS
 ARDUINO_LIBS += ArduinoJson
 ARDUINO_LIBS += WiFi101
+ARDUINO_LIBS += BME280
 
 -include ${arduino_mk}
 

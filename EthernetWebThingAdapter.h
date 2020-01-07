@@ -13,6 +13,7 @@
 #if !defined(ESP32) && !defined(ESP8266)
 
 #include <Arduino.h>
+
 #if defined(STM32F7xx)
 #include <LwIP.h>
 #include <STM32Ethernet.h>
@@ -20,16 +21,12 @@
 #include <Ethernet.h>
 #include <EthernetClient.h>
 #include <EthernetServer.h>
-#include <EthernetUdp.h>
-#include <Dhcp.h>
-#include <Dns.h>
 #define CONFIG_MDNS 1
 #endif
 
 #ifdef CONFIG_MDNS
+#include <EthernetUdp.h>
 #include <ArduinoMDNS.h>
-EthernetUDP udp;
-MDNS mdns(udp);
 #endif
 
 #include <ArduinoJson.h>

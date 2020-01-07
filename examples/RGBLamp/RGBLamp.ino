@@ -14,6 +14,10 @@
 #include <Thing.h>
 #include <WebThingAdapter.h>
 
+#ifdef ESP32
+#include <analogWrite.h>
+#endif
+
 // TODO: Hardcode your wifi credentials here (and keep it private)
 const char *ssid = "public";
 const char *password = "";
