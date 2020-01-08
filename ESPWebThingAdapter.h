@@ -147,31 +147,6 @@ public:
     this->server.begin();
   }
 
-#ifndef WITHOUT_WS
-  void sendChangedProperties(ThingDevice *device) {
-    // Prepare one buffer per device
-    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-    message["messageType"] = "propertyStatus";
-    JsonObject prop = message.createNestedObject("data");
-    bool dataToSend = false;
-    ThingItem *item = device->firstProperty;
-    while (item != nullptr) {
-      ThingDataValue *value = item->changedValueOrNull();
-      if (value) {
-        dataToSend = true;
-        item->serializeValue(prop);
-      }
-      item = item->next;
-    }
-    if (dataToSend) {
-      String jsonStr;
-      serializeJson(message, jsonStr);
-      // Inform all connected ws clients of a Thing about changed properties
-      ((AsyncWebSocket *)device->ws)->textAll(jsonStr);
-    }
-  }
-#endif
-
   void update() {
 #ifdef ESP8266
     MDNS.update();
@@ -310,11 +285,9 @@ private:
 
         ThingActionObject *obj = device->requestAction(actionRequest);
         if (obj != nullptr) {
-#ifndef WITHOUT_WS
           obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus,
                                            device, std::placeholders::_1));
           device->sendActionStatus(obj);
-#endif
 
           obj->start();
         }
@@ -326,6 +299,29 @@ private:
           device->addEventSubscription(client->id(), event->id);
         }
       }
+    }
+  }
+
+  void sendChangedProperties(ThingDevice *device) {
+    // Prepare one buffer per device
+    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+    message["messageType"] = "propertyStatus";
+    JsonObject prop = message.createNestedObject("data");
+    bool dataToSend = false;
+    ThingItem *item = device->firstProperty;
+    while (item != nullptr) {
+      ThingDataValue *value = item->changedValueOrNull();
+      if (value) {
+        dataToSend = true;
+        item->serializeValue(prop);
+      }
+      item = item->next;
+    }
+    if (dataToSend) {
+      String jsonStr;
+      serializeJson(message, jsonStr);
+      // Inform all connected ws clients of a Thing about changed properties
+      ((AsyncWebSocket *)device->ws)->textAll(jsonStr);
     }
   }
 #endif
