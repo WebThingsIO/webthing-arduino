@@ -397,6 +397,8 @@ private:
     client.println("Access-Control-Allow-Origin: *");
     client.println(
         "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    client.println("Access-Control-Allow-Headers: "
+                   "Origin, X-Requested-With, Content-Type, Accept");
     client.println("Content-Type: application/json");
     client.println("Connection: close");
     client.println();
