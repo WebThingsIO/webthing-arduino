@@ -58,10 +58,16 @@ public:
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods",
                                          "GET, POST, PUT, DELETE, OPTIONS");
+    DefaultHeaders::Instance().addHeader(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept");
 
     this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this,
                                       std::placeholders::_1));
 
+    this->server.on("/*", HTTP_OPTIONS,
+                    std::bind(&WebThingAdapter::handleOptions, this,
+                              std::placeholders::_1));
     this->server.on("/", HTTP_GET,
                     std::bind(&WebThingAdapter::handleThings, this,
                               std::placeholders::_1));
@@ -331,6 +337,13 @@ private:
       return;
     }
     request->send(404);
+  }
+
+  void handleOptions(AsyncWebServerRequest *request) {
+    if (!verifyHost(request)) {
+      return;
+    }
+    request->send(204);
   }
 
   void handleThings(AsyncWebServerRequest *request) {
