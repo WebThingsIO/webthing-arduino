@@ -27,6 +27,8 @@
  updates: dh, kg 2018
  */
 
+#define LARGE_JSON_BUFFERS 1
+
 #include <Arduino.h>
 #include <BME280.h>
 #include <BME280I2C.h>
