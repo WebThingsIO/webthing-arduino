@@ -226,6 +226,11 @@ public:
     this->hasChanged = true;
   }
 
+  void setValue(const char *s) {
+    *(this->getValue().string) = s;
+    this->hasChanged = true;
+  }
+
   /**
    * Returns the property value if it has been changed via {@link setValue}
    * since the last call or returns a nullptr.
@@ -603,7 +608,7 @@ public:
       break;
     }
     case STRING:
-      *(property->getValue().string) = newValue.as<String>();
+      property->setValue(newValue.as<const char *>());
       property->changed(property->getValue());
       break;
     }

@@ -3,6 +3,8 @@
  * thing-url-adapter.
  */
 
+#define LARGE_JSON_BUFFERS 1
+
 #include <Arduino.h>
 #include <Thing.h>
 #include <WebThingAdapter.h>
