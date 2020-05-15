@@ -153,4 +153,7 @@ void loop(void) {
     // Else, you can define your own size
     #define SMALL_JSON_DOCUMENT_SIZE <something>
     #define LARGE_JSON_DOCUMENT_SIZE <something>
+
+    #include <Thing.h>
+    #include <WebThingAdapter.h>
     ```
