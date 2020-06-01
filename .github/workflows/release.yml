@@ -15,7 +15,7 @@ jobs:
       - name: Package project
         run: |
           mkdir webthing-arduino
-          cp -rL CODE_OF_CONDUCT.md *.h LICENSE README.md library.* docs/ examples/ webthing-arduino/
+          cp -r CODE_OF_CONDUCT.md *.h LICENSE README.md library.* docs/ examples/ webthing-arduino/
           zip -r webthing-arduino.zip webthing-arduino/
       - name: Create Release
         id: create_release
