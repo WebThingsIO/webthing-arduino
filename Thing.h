@@ -19,6 +19,7 @@
 #include <ESPAsyncWebServer.h>
 #endif
 
+#define ARDUINOJSON_USE_LONG_LONG 1
 #include <ArduinoJson.h>
 
 #ifndef LARGE_JSON_DOCUMENT_SIZE
