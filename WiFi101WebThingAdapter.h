@@ -10,7 +10,7 @@
 
 #pragma once
 
-#if !defined(ESP32) && !defined(ESP8266)
+#if !defined(ESP32) && !defined(ESP8266) && !defined(SEEED_WIO_TERMINAL)
 
 #include <Arduino.h>
 
