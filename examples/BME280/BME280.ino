@@ -50,7 +50,8 @@ WebThingAdapter *adapter;
 const char *bme280Types[] = {"TemperatureSensor", nullptr};
 ThingDevice weather("bme280", "BME280 Weather Sensor", bme280Types);
 ThingProperty weatherTemp("temperature", "", NUMBER, "TemperatureProperty");
-ThingProperty weatherHum("humidity", "", NUMBER, "LevelProperty"); // Set humidity as level-property
+// Set humidity as level-property
+ThingProperty weatherHum("humidity", "", NUMBER, "LevelProperty");
 ThingProperty weatherPres("pressure", "", NUMBER, nullptr);
 
 BME280I2C::Settings
