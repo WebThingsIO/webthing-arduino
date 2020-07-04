@@ -124,7 +124,7 @@ void setup() {
   adapter = new WebThingAdapter("weathersensor", WiFi.localIP());
 
   // Set unit for temperature to degree celsius. Other option "fahrenheit"
-  weatherTemp.unit = "celsius";
+  weatherTemp.unit = "degree celsius";
   
   // Set title to "Pressure"
   weatherPres.title = "Pressure";
