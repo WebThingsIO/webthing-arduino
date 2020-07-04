@@ -50,7 +50,8 @@ WebThingAdapter *adapter;
 const char *bme280Types[] = {"TemperatureSensor", nullptr};
 ThingDevice weather("bme280", "BME280 Weather Sensor", bme280Types);
 ThingProperty weatherTemp("temperature", "", NUMBER, "TemperatureProperty");
-ThingProperty weatherHum("humidity", "", NUMBER, nullptr);
+// Set humidity as level-property
+ThingProperty weatherHum("humidity", "", NUMBER, "LevelProperty");
 ThingProperty weatherPres("pressure", "", NUMBER, nullptr);
 
 BME280I2C::Settings
@@ -123,7 +124,26 @@ void setup() {
   digitalWrite(LED_BUILTIN, PIN_STATE_HIGH);
   adapter = new WebThingAdapter("weathersensor", WiFi.localIP());
 
-  weatherTemp.unit = "celsius";
+  // Set unit for temperature
+  weatherTemp.unit = "degree celsius";
+
+  // Set title to "Pressure"
+  weatherPres.title = "Pressure";
+  // Set unit for pressure to hPa
+  weatherPres.unit = "hPa";
+  // Set pressure to read only
+  weatherPres.readOnly = "true";
+
+  // Set title to "Humidity"
+  weatherHum.title = "Humidity";
+  // Set unit for humidity to %
+  weatherHum.unit = "percent";
+  // Set humidity as read only
+  weatherHum.readOnly = "true";
+  // Set min and max for LevelProperty
+  weatherHum.minimum = 0;
+  weatherHum.maximum = 100;
+
   weather.addProperty(&weatherTemp);
   weather.addProperty(&weatherPres);
   weather.addProperty(&weatherHum);
