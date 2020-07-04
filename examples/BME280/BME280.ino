@@ -126,14 +126,14 @@ void setup() {
 
   // Set unit for temperature
   weatherTemp.unit = "degree celsius";
-  
+
   // Set title to "Pressure"
   weatherPres.title = "Pressure";
   // Set unit for pressure to hPa
   weatherPres.unit = "hPa";
   // Set pressure to read only
   weatherPres.readOnly = "true";
-  
+
   // Set title to "Humidity"
   weatherHum.title = "Humidity";
   // Set unit for humidity to %
@@ -143,7 +143,7 @@ void setup() {
   // Set min and max for LevelProperty
   weatherHum.minimum = 0;
   weatherHum.maximum = 100;
-  
+
   weather.addProperty(&weatherTemp);
   weather.addProperty(&weatherPres);
   weather.addProperty(&weatherHum);
