@@ -1,29 +1,29 @@
 {
-    "name": "webthing-arduino",
-    "description": "A library for creating Web Things using the Web of Things API. Runs on ESP8266, ESP32, Ethernet, and WiFi101-compatible boards. Compatible with the Mozilla WebThings Gateway.",
-    "keywords": "Communication",
-    "version": "0.11.5",
-    "authors": {
-        "name": "Mozilla IoT <iot@mozilla.com>"
-    },
-    "repository":
-    {
-        "type": "git",
-        "url": "https://github.com/mozilla-iot/webthing-arduino"
-    },
-    "license": "Mozilla Public License Version 2.0",
-    "platforms": "espressif8266,espressif32,atmelavr",
-    "dependencies": {
-        "ArduinoJson": "6.15.0"
-    },
-    "export": {
-        "include":
-        [
-            "*.cpp",
-            "*.h"
-        ]
-    },
-    "examples": [
-        "examples/PlatformIO/*/src/*.cpp"
+  "name": "webthing-arduino",
+  "description": "A library for creating Web Things using the Web of Things API. Runs on ESP8266, ESP32, Ethernet, and WiFi101-compatible boards. Compatible with the Mozilla WebThings Gateway.",
+  "keywords": "Communication",
+  "version": "0.11.5",
+  "authors": {
+    "name": "Mozilla IoT",
+    "email": "iot@mozilla.com",
+    "url": "https://iot.mozilla.org"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mozilla-iot/webthing-arduino"
+  },
+  "license": "Mozilla Public License Version 2.0",
+  "platforms": "espressif8266,espressif32,atmelavr,atmelsam",
+  "dependencies": {
+    "ArduinoJson": "^6.15.0"
+  },
+  "export": {
+    "include": [
+      "*.cpp",
+      "*.h"
     ]
+  },
+  "examples": [
+    "examples/PlatformIO/*/src/*.cpp"
+  ]
 }
