@@ -56,8 +56,10 @@ proposed API.
 ## PlatformIO
 
 Add the `webthing-arduino` library through PlatformIO's package management
-interface. You may also need to manually add the ArduinoJson and other
-libraries to your project.
+interface. Ensure that you get the latest release by examining the entries
+in the version number dropdown list. It may be sorted counter-intuitively.
+You may also need to manually add the ArduinoJson and other libraries to 
+your project.
 
 ## Example
 
