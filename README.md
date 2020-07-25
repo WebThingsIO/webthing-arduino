@@ -159,3 +159,7 @@ void loop(void) {
     #include <Thing.h>
     #include <WebThingAdapter.h>
     ```
+
+# Adding to Gateway
+
+To add your web thing to the WebThings Gateway, install the "Web Thing" add-on and follow the instructions [here](https://github.com/mozilla-iot/thing-url-adapter#readme).
