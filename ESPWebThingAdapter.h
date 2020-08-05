@@ -319,7 +319,7 @@ private:
       ThingDataValue *value = item->changedValueOrNull();
       if (value) {
         dataToSend = true;
-        item->serializeValue(prop);
+        item->serializeValueToObject(prop);
       }
       item = item->next;
     }
@@ -391,9 +391,9 @@ private:
         request->beginResponseStream("application/json");
 
     DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
-    JsonObject prop = doc.to<JsonObject>();
-    item->serializeValue(prop);
-    serializeJson(prop, *response);
+    JsonVariant variant = doc.to<JsonVariant>();
+    item->serializeValueToVariant(variant);
+    serializeJson(doc, *response);
     request->send(response);
   }
 
@@ -552,7 +552,7 @@ private:
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
-      item->serializeValue(prop);
+      item->serializeValueToObject(prop);
       item = item->next;
     }
     serializeJson(prop, *response);
@@ -680,16 +680,9 @@ private:
       request->send(500);
       return;
     }
-    JsonObject newProp = newBuffer.as<JsonObject>();
+    JsonVariant newProp = newBuffer.as<JsonVariant>();
 
-    if (!newProp.containsKey(property->id)) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(400);
-      return;
-    }
-
-    device->setProperty(property->id.c_str(), newProp[property->id]);
+    device->setProperty(property->id.c_str(), newProp);
 
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");

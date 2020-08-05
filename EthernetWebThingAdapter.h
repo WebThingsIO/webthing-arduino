@@ -455,9 +455,9 @@ private:
     sendHeaders();
 
     DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
-    JsonObject prop = doc.to<JsonObject>();
-    item->serializeValue(prop);
-    serializeJson(prop, client);
+    JsonVariant variant = doc.to<JsonVariant>();
+    item->serializeValueToVariant(variant);
+    serializeJson(doc, client);
     delay(1);
     client.stop();
   }
@@ -575,7 +575,7 @@ private:
     JsonObject prop = doc.to<JsonObject>();
     ThingItem *item = rootItem;
     while (item != nullptr) {
-      item->serializeValue(prop);
+      item->serializeValueToObject(prop);
       item = item->next;
     }
     serializeJson(prop, client);
@@ -653,14 +653,9 @@ private:
       handleError();
       return;
     }
-    JsonObject newProp = newBuffer.as<JsonObject>();
+    JsonVariant newProp = newBuffer.as<JsonVariant>();
 
-    if (!newProp.containsKey(property->id)) {
-      handleError();
-      return;
-    }
-
-    device->setProperty(property->id.c_str(), newProp[property->id]);
+    device->setProperty(property->id.c_str(), newProp);
 
     sendOk();
     sendHeaders();

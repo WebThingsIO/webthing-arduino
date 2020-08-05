@@ -303,7 +303,7 @@ public:
         "/things/" + deviceId + "/" + resourceType + "/" + id;
   }
 
-  void serializeValue(JsonObject prop) {
+  void serializeValueToObject(JsonObject prop) {
     switch (this->type) {
     case NO_STATE:
       break;
@@ -318,6 +318,25 @@ public:
       break;
     case STRING:
       prop[this->id] = *this->getValue().string;
+      break;
+    }
+  }
+
+  void serializeValueToVariant(JsonVariant variant) {
+    switch (this->type) {
+    case NO_STATE:
+      break;
+    case BOOLEAN:
+      variant.set(this->getValue().boolean);
+      break;
+    case NUMBER:
+      variant.set(this->getValue().number);
+      break;
+    case INTEGER:
+      variant.set(this->getValue().integer);
+      break;
+    case STRING:
+      variant.set(*this->getValue().string);
       break;
     }
   }
