@@ -422,6 +422,8 @@ private:
         actionId = actionId.substring(0, slash - actionIdC);
       }
 
+      // TODO: Remove action key from response
+
       ThingActionObject *obj = device->findActionObject(actionId.c_str());
       if (obj == nullptr) {
         request->send(404);
@@ -486,6 +488,9 @@ private:
     }
 
     JsonObject newAction = newBuffer->as<JsonObject>();
+
+    // TODO: Remove expected action key from input
+    // TODO: Inject action key into newBuffer before passing to requestAction
 
     if (!newAction.containsKey(action->id)) {
       b_has_body_data = false;
