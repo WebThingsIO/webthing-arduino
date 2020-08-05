@@ -1,16 +1,15 @@
 {
-  "name": "webthing-arduino",
-  "description": "A library for creating Web Things using the Web of Things API. Runs on ESP8266, ESP32, Ethernet, and WiFi101-compatible boards. Compatible with the Mozilla WebThings Gateway.",
+  "name": "arduino-labthings",
+  "description": "A library for creating Lab Things. Runs on ESP8266, ESP32, Ethernet, and WiFi101-compatible boards",
   "keywords": "Communication",
   "version": "0.11.5",
   "authors": {
-    "name": "Mozilla IoT",
-    "email": "iot@mozilla.com",
-    "url": "https://iot.mozilla.org"
+    "name": "Joel Collins",
+    "email": "joel@jtcollins.net",
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mozilla-iot/webthing-arduino"
+    "url": "https://github.com/labthings/arduino-labthings"
   },
   "license": "Mozilla Public License Version 2.0",
   "platforms": "espressif8266,espressif32,atmelavr,atmelsam",
