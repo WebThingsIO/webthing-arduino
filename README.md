@@ -1,11 +1,12 @@
-webthing-arduino
-================
+# arduino-labthings
+
+[![LabThings](https://img.shields.io/badge/-LabThings-8E00FF?style=flat&logo=data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz4NCjxzdmcgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1taXRlcmxpbWl0PSIyIiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxNjMgMTYzIiB4bWw6c3BhY2U9InByZXNlcnZlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im0xMjIuMjQgMTYyLjk5aDQwLjc0OHYtMTYyLjk5aC0xMDEuODd2NDAuNzQ4aDYxLjEyMnYxMjIuMjR6IiBmaWxsPSIjZmZmIi8+PHBhdGggZD0ibTAgMTIuMjI0di0xMi4yMjRoNDAuNzQ4djEyMi4yNGg2MS4xMjJ2NDAuNzQ4aC0xMDEuODd2LTEyLjIyNGgyMC4zNzR2LTguMTVoLTIwLjM3NHYtOC4xNDloOC4wMTl2LTguMTVoLTguMDE5di04LjE1aDIwLjM3NHYtOC4xNDloLTIwLjM3NHYtOC4xNWg4LjAxOXYtOC4xNWgtOC4wMTl2LTguMTQ5aDIwLjM3NHYtOC4xNWgtMjAuMzc0di04LjE0OWg4LjAxOXYtOC4xNWgtOC4wMTl2LTguMTVoMjAuMzc0di04LjE0OWgtMjAuMzc0di04LjE1aDguMDE5di04LjE0OWgtOC4wMTl2LTguMTVoMjAuMzc0di04LjE1aC0yMC4zNzR6IiBmaWxsPSIjZmZmIi8+PC9zdmc+DQo=)](https://github.com/labthings/)
+[![Riot.im](https://img.shields.io/badge/chat-on%20riot.im-368BD6)](https://riot.im/app/#/room/#labthings:matrix.org)
 
 A simple server for the ESP8266, the ESP32, ~~boards with Ethernet, or any
 WiFi101-compatible board~~ that implements the W3C Web of Things API.
 
-
-## Arduino
+## Supported boards
 
 ### ESP8266 or ESP32
 
@@ -32,13 +33,37 @@ If you want to create a Web Thing from scratch, make sure to include both
 Ethernet board). You can then add Things and Properties to your board using our
 proposed API.
 
-## PlatformIO
+## Installation
+
+### PlatformIO
 
 Add the `webthing-arduino` library through PlatformIO's package management
-interface. Ensure that you get the latest release by examining the entries
-in the version number dropdown list. It may be sorted counter-intuitively.
-You may also need to manually add the ArduinoJson and other libraries to 
-your project.
+interface. For example (using an espressif8266 huzzah board), in your projects `platformio.ini` file, include:
+
+```ini
+[platformio]
+env_default= huzzah
+
+[global]
+lib_deps =
+    https://github.com/labthings/arduino-labthings
+monitor_speed = 115200
+build_type = debug
+
+[env:huzzah]
+platform = espressif8266
+board = huzzah
+framework = arduino
+lib_deps =
+    ${global.lib_deps}
+    ESP Async WebServer
+lib_ignore = WiFi101
+lib_ldf_mode = deep+
+monitor_speed =  ${global.monitor_speed}
+```
+
+Run `platformio lib install` from within your project directory to install all dependencies,
+and run `platformio run -e huzzah -t upload` to build and upload (replace `huzzah` with your boards environment).
 
 See the `examples` folder for `platformio.ini` examples.
 
