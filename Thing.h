@@ -97,22 +97,20 @@ public:
   }
 
   void serialize(JsonObject obj, String deviceId) {
-    JsonObject data = obj.createNestedObject(name);
-
     JsonObject actionRequestObj = actionRequest->as<JsonObject>();
-    data["input"] = actionRequestObj;
+    obj["input"] = actionRequestObj;
 
-    data["status"] = status;
-    data["timeRequested"] = timeRequested;
+    obj["status"] = status;
+    obj["timeRequested"] = timeRequested;
 
     if (timeCompleted != "") {
-      data["timeCompleted"] = timeCompleted;
+      obj["timeCompleted"] = timeCompleted;
     }
 
-    data["id"] = id;
-    data["title"] = name;
+    obj["id"] = id;
+    obj["title"] = name;
 
-    data["href"] = "/actions/" + name + "/" + id;
+    obj["href"] = "/actions/" + name + "/" + id;
   }
 
   void setStatus(const char *s) {
