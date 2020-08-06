@@ -175,7 +175,7 @@ public:
     return generator_fn(actionRequest);
   }
 
-  void serialize(JsonObject obj, String deviceId) {
+  void serialize(JsonObject obj, String deviceId, String resourceType) {
     if (title != "") {
       obj["title"] = title;
     }
@@ -300,8 +300,7 @@ public:
     // implied default rel=property.)
     JsonArray inline_links = obj.createNestedArray("links");
     JsonObject inline_links_prop = inline_links.createNestedObject();
-    inline_links_prop["href"] =
-        "/things/" + deviceId + "/" + resourceType + "/" + id;
+    inline_links_prop["href"] = "/" + resourceType + "/" + id;
   }
 
   void serializeValueToObject(JsonObject prop) {
@@ -788,11 +787,13 @@ public:
       JsonObject actions = descr.createNestedObject("actions");
       while (action != nullptr) {
         JsonObject obj = actions.createNestedObject(action->id);
-        action->serialize(obj, id);
+        action->serialize(obj, id, "actions");
         action = action->next;
       }
     }
 
+
+    // TODO: FIX THIS. Doesn't seem to be working.
     ThingEvent *event = this->firstEvent;
     if (event != nullptr) {
       JsonObject events = descr.createNestedObject("events");
