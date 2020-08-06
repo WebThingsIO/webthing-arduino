@@ -129,7 +129,7 @@ public:
     setStatus("pending");
 
     JsonObject actionRequestObj = actionRequest->as<JsonObject>();
-    start_fn(actionRequestObj["input"]);
+    start_fn(actionRequestObj);
 
     finish();
   }
@@ -638,7 +638,6 @@ public:
   }
 
   ThingActionObject *requestAction(const char *name, DynamicJsonDocument *actionRequest) {
-    JsonObject actionObj = actionRequest->as<JsonObject>();
 
     ThingAction *action = findAction(name);
     if (action == nullptr) {

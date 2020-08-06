@@ -437,8 +437,6 @@ private:
       return;
     }
 
-    JsonObject newAction = newActionBuffer->as<JsonObject>();
-
     ThingActionObject *obj = device->requestAction(action->id.c_str(), newActionBuffer);
 
     if (obj == nullptr) {
