@@ -740,19 +740,19 @@ public:
     {
       JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "properties";
-      links_prop["href"] = "/things/" + this->id + "/properties";
+      links_prop["href"] = "/properties";
     }
 
     {
       JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "actions";
-      links_prop["href"] = "/things/" + this->id + "/actions";
+      links_prop["href"] = "/actions";
     }
 
     {
       JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "events";
-      links_prop["href"] = "/things/" + this->id + "/events";
+      links_prop["href"] = "/events";
     }
 
 #ifndef WITHOUT_WS
