@@ -72,6 +72,7 @@ public:
                     void (*cancel_fn_)())
       : start_fn(start_fn_), cancel_fn(cancel_fn_), name(name_),
         actionRequest(actionRequest_),
+        // TODO: Get actual time
         timeRequested("1970-01-01T00:00:00+00:00"), status("created") {
     generateId();
   }
@@ -99,7 +100,7 @@ public:
     JsonObject data = obj.createNestedObject(name);
 
     JsonObject actionRequestObj = actionRequest->as<JsonObject>();
-    data["input"] = actionRequestObj["input"];
+    data["input"] = actionRequestObj;
 
     data["status"] = status;
     data["timeRequested"] = timeRequested;
@@ -107,6 +108,9 @@ public:
     if (timeCompleted != "") {
       data["timeCompleted"] = timeCompleted;
     }
+
+    data["id"] = id;
+    data["title"] = name;
 
     data["href"] = "/actions/" + name + "/" + id;
   }
@@ -137,6 +141,7 @@ public:
   }
 
   void finish() {
+    // TODO: Get actual time
     timeCompleted = "1970-01-01T00:00:00+00:00";
     setStatus("completed");
   }
@@ -197,7 +202,7 @@ public:
     // implied default rel=action.)
     JsonArray inline_links = obj.createNestedArray("links");
     JsonObject inline_links_prop = inline_links.createNestedObject();
-    inline_links_prop["href"] = "/things/" + deviceId + "/actions/" + id;
+    inline_links_prop["href"] = "/actions/" + id;
   }
 };
 
