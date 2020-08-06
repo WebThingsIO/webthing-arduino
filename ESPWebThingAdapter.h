@@ -43,10 +43,11 @@
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80)
-      : server(_port), name(_name), ip(_ip.toString()), port(_port) {}
+  WebThingAdapter(ThingDevice *_thing, String _name, IPAddress _ip, uint16_t _port = 80)
+      : thing(_thing), server(_port), name(_name), ip(_ip.toString()), port(_port) {}
 
   void begin() {
+    // TODO: Code from addDevice to add thing to WS etc
     name.toLowerCase();
     if (MDNS.begin(this->name.c_str())) {
       Serial.println("MDNS responder started");
@@ -68,87 +69,93 @@ public:
     this->server.on("/*", HTTP_OPTIONS,
                     std::bind(&WebThingAdapter::handleOptions, this,
                               std::placeholders::_1));
+
+    ThingDevice *device = this->thing;
+
     this->server.on("/", HTTP_GET,
-                    std::bind(&WebThingAdapter::handleThings, this,
-                              std::placeholders::_1));
+                    std::bind(&WebThingAdapter::handleThing, this,
+                              std::placeholders::_1, device));
 
-    ThingDevice *device = this->firstDevice;
-    while (device != nullptr) {
-      String deviceBase = "/things/" + device->id;
-
-      ThingProperty *property = device->firstProperty;
-      while (property != nullptr) {
-        String propertyBase = deviceBase + "/properties/" + property->id;
-        this->server.on(propertyBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingPropertyGet,
-                                  this, std::placeholders::_1, property));
-        this->server.on(propertyBase.c_str(), HTTP_PUT,
-                        std::bind(&WebThingAdapter::handleThingPropertyPut,
-                                  this, std::placeholders::_1, device,
-                                  property),
-                        NULL,
-                        std::bind(&WebThingAdapter::handleBody, this,
-                                  std::placeholders::_1, std::placeholders::_2,
-                                  std::placeholders::_3, std::placeholders::_4,
-                                  std::placeholders::_5));
-
-        property = (ThingProperty *)property->next;
-      }
-
-      ThingAction *action = device->firstAction;
-      while (action != nullptr) {
-        String actionBase = deviceBase + "/actions/" + action->id;
-        this->server.on(actionBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingActionGet, this,
-                                  std::placeholders::_1, device, action));
-        this->server.on(actionBase.c_str(), HTTP_POST,
-                        std::bind(&WebThingAdapter::handleThingActionPost,
-                                  this, std::placeholders::_1, device, action),
-                        NULL,
-                        std::bind(&WebThingAdapter::handleBody, this,
-                                  std::placeholders::_1, std::placeholders::_2,
-                                  std::placeholders::_3, std::placeholders::_4,
-                                  std::placeholders::_5));
-        this->server.on(actionBase.c_str(), HTTP_DELETE,
-                        std::bind(&WebThingAdapter::handleThingActionDelete,
-                                  this, std::placeholders::_1, device,
-                                  action));
-        action = (ThingAction *)action->next;
-      }
-
-      ThingEvent *event = device->firstEvent;
-      while (event != nullptr) {
-        String eventBase = deviceBase + "/events/" + event->id;
-        this->server.on(eventBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingEventGet, this,
-                                  std::placeholders::_1, device, event));
-        event = (ThingEvent *)event->next;
-      }
-
-      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingPropertiesGet,
-                                this, std::placeholders::_1,
-                                device->firstProperty));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingActionsGet, this,
-                                std::placeholders::_1, device));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_POST,
-                      std::bind(&WebThingAdapter::handleThingActionsPost, this,
-                                std::placeholders::_1, device),
+    ThingProperty *property = this->thing->firstProperty;
+    while (property != nullptr) {
+      String propertyBase = "/properties/" + property->id;
+      this->server.on(propertyBase.c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingPropertyGet,
+                                this, std::placeholders::_1, property));
+      this->server.on(propertyBase.c_str(), HTTP_PUT,
+                      std::bind(&WebThingAdapter::handleThingPropertyPut,
+                                this, std::placeholders::_1, this->thing,
+                                property),
                       NULL,
                       std::bind(&WebThingAdapter::handleBody, this,
                                 std::placeholders::_1, std::placeholders::_2,
                                 std::placeholders::_3, std::placeholders::_4,
                                 std::placeholders::_5));
-      this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingEventsGet, this,
-                                std::placeholders::_1, device));
-      this->server.on(deviceBase.c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThing, this,
-                                std::placeholders::_1, device));
 
-      device = device->next;
+      property = (ThingProperty *)property->next;
     }
+
+    ThingAction *action = this->thing->firstAction;
+    while (action != nullptr) {
+      String actionBase = "/actions/" + action->id;
+      this->server.on(actionBase.c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingActionGet, this,
+                                std::placeholders::_1, this->thing, action));
+      this->server.on(actionBase.c_str(), HTTP_POST,
+                      std::bind(&WebThingAdapter::handleThingActionPost,
+                                this, std::placeholders::_1, this->thing, action),
+                      NULL,
+                      std::bind(&WebThingAdapter::handleBody, this,
+                                std::placeholders::_1, std::placeholders::_2,
+                                std::placeholders::_3, std::placeholders::_4,
+                                std::placeholders::_5));
+      this->server.on(actionBase.c_str(), HTTP_DELETE,
+                      std::bind(&WebThingAdapter::handleThingActionDelete,
+                                this, std::placeholders::_1, this->thing,
+                                action));
+      action = (ThingAction *)action->next;
+    }
+
+    ThingEvent *event = this->thing->firstEvent;
+    while (event != nullptr) {
+      String eventBase = "/events/" + event->id;
+      this->server.on(eventBase.c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingEventGet, this,
+                                std::placeholders::_1, this->thing, event));
+      event = (ThingEvent *)event->next;
+    }
+
+    this->server.on("/properties", HTTP_GET,
+                    std::bind(&WebThingAdapter::handleThingPropertiesGet,
+                              this, std::placeholders::_1,
+                              this->thing->firstProperty));
+    this->server.on("/actions", HTTP_GET,
+                    std::bind(&WebThingAdapter::handleThingActionsGet, this,
+                              std::placeholders::_1, this->thing));
+    this->server.on("/actions", HTTP_POST,
+                    std::bind(&WebThingAdapter::handleThingActionsPost, this,
+                              std::placeholders::_1, this->thing),
+                    NULL,
+                    std::bind(&WebThingAdapter::handleBody, this,
+                              std::placeholders::_1, std::placeholders::_2,
+                              std::placeholders::_3, std::placeholders::_4,
+                              std::placeholders::_5));
+    this->server.on("/events", HTTP_GET,
+                    std::bind(&WebThingAdapter::handleThingEventsGet, this,
+                              std::placeholders::_1, this->thing));
+
+#ifndef WITHOUT_WS
+    // Initiate the websocket instance
+    AsyncWebSocket *ws = new AsyncWebSocket("/ws");
+    device->ws = ws;
+    // AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType
+    // type, void * arg, uint8_t *data, size_t len, ThingDevice* device
+    ws->onEvent(std::bind(
+        &WebThingAdapter::handleWS, this, std::placeholders::_1,
+        std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
+        std::placeholders::_5, std::placeholders::_6, device));
+    this->server.addHandler(ws);
+#endif
 
     this->server.begin();
   }
@@ -160,45 +167,18 @@ public:
 #ifndef WITHOUT_WS
     // * Send changed properties as defined in "4.5 propertyStatus message"
     // Do this by looping over all devices and properties
-    ThingDevice *device = this->firstDevice;
-    while (device != nullptr) {
-      sendChangedProperties(device);
-      device = device->next;
-    }
+    sendChangedProperties(this->thing);
 #endif
   }
 
-  void addDevice(ThingDevice *device) {
-    if (this->lastDevice == nullptr) {
-      this->firstDevice = device;
-      this->lastDevice = device;
-    } else {
-      this->lastDevice->next = device;
-      this->lastDevice = device;
-    }
-
-#ifndef WITHOUT_WS
-    // Initiate the websocket instance
-    AsyncWebSocket *ws = new AsyncWebSocket("/things/" + device->id);
-    device->ws = ws;
-    // AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType
-    // type, void * arg, uint8_t *data, size_t len, ThingDevice* device
-    ws->onEvent(std::bind(
-        &WebThingAdapter::handleWS, this, std::placeholders::_1,
-        std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
-        std::placeholders::_5, std::placeholders::_6, device));
-    this->server.addHandler(ws);
-#endif
-  }
 
 private:
+  ThingDevice *thing = nullptr;
   AsyncWebServer server;
-
   String name;
   String ip;
   uint16_t port;
-  ThingDevice *firstDevice = nullptr;
-  ThingDevice *lastDevice = nullptr;
+
   char body_data[ESP_MAX_PUT_BODY_SIZE];
   bool b_has_body_data = false;
 
@@ -346,27 +326,6 @@ private:
     request->send(204);
   }
 
-  void handleThings(AsyncWebServerRequest *request) {
-    if (!verifyHost(request)) {
-      return;
-    }
-    AsyncResponseStream *response =
-        request->beginResponseStream("application/json");
-
-    DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray things = buf.to<JsonArray>();
-    ThingDevice *device = this->firstDevice;
-    while (device != nullptr) {
-      JsonObject descr = things.createNestedObject();
-      device->serialize(descr, ip, port);
-      descr["href"] = "/things/" + device->id;
-      device = device->next;
-    }
-
-    serializeJson(things, *response);
-    request->send(response);
-  }
-
   void handleThing(AsyncWebServerRequest *request, ThingDevice *&device) {
     if (!verifyHost(request)) {
       return;
@@ -404,7 +363,7 @@ private:
     }
 
     String url = request->url();
-    String base = "/things/" + device->id + "/actions/" + action->id;
+    String base = "/actions/" + action->id;
     if (url == base || url == base + "/") {
       AsyncResponseStream *response =
           request->beginResponseStream("application/json");
@@ -447,7 +406,7 @@ private:
     }
 
     String url = request->url();
-    String base = "/things/" + device->id + "/actions/" + action->id;
+    String base = "/actions/" + action->id;
     if (url == base || url == base + "/") {
       request->send(404);
       return;
