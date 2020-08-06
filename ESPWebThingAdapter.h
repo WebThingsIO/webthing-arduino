@@ -132,14 +132,6 @@ public:
     this->server.on("/actions", HTTP_GET,
                     std::bind(&WebThingAdapter::handleThingActionsGet, this,
                               std::placeholders::_1, this->thing));
-    this->server.on("/actions", HTTP_POST,
-                    std::bind(&WebThingAdapter::handleThingActionsPost, this,
-                              std::placeholders::_1, this->thing),
-                    NULL,
-                    std::bind(&WebThingAdapter::handleBody, this,
-                              std::placeholders::_1, std::placeholders::_2,
-                              std::placeholders::_3, std::placeholders::_4,
-                              std::placeholders::_5));
     this->server.on("/events", HTTP_GET,
                     std::bind(&WebThingAdapter::handleThingEventsGet, this,
                               std::placeholders::_1, this->thing));
@@ -263,13 +255,12 @@ private:
             new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
 
         JsonObject actionObj = actionRequest->to<JsonObject>();
-        JsonObject nested = actionObj.createNestedObject(kv.key());
 
         for (JsonPair kvInner : kv.value().as<JsonObject>()) {
-          nested[kvInner.key()] = kvInner.value();
+          actionObj[kvInner.key()] = kvInner.value();
         }
 
-        ThingActionObject *obj = device->requestAction(actionRequest);
+        ThingActionObject *obj = device->requestAction(kv.key().c_str(), actionRequest);
         if (obj != nullptr) {
           obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus,
                                            device, std::placeholders::_1));
@@ -435,37 +426,26 @@ private:
       return;
     }
 
-    DynamicJsonDocument *newBuffer =
+    DynamicJsonDocument *newActionBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, (const char *)body_data);
+    auto error = deserializeJson(*newActionBuffer, (const char *)body_data);
     if (error) { // unable to parse json
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       request->send(500);
-      delete newBuffer;
+      delete newActionBuffer;
       return;
     }
 
-    JsonObject newAction = newBuffer->as<JsonObject>();
+    JsonObject newAction = newActionBuffer->as<JsonObject>();
 
-    // TODO: Remove expected action key from input
-    // TODO: Inject action key into newBuffer before passing to requestAction
-
-    if (!newAction.containsKey(action->id)) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(400);
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
+    ThingActionObject *obj = device->requestAction(action->id.c_str(), newActionBuffer);
 
     if (obj == nullptr) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       request->send(500);
-      delete newBuffer;
+      delete newActionBuffer;
       return;
     }
 
@@ -536,68 +516,6 @@ private:
     device->serializeActionQueue(queue);
     serializeJson(queue, *response);
     request->send(response);
-  }
-
-  void handleThingActionsPost(AsyncWebServerRequest *request,
-                              ThingDevice *device) {
-    if (!verifyHost(request)) {
-      return;
-    }
-
-    if (!b_has_body_data) {
-      request->send(422); // unprocessable entity (b/c no body)
-      return;
-    }
-
-    DynamicJsonDocument *newBuffer =
-        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, (const char *)body_data);
-    if (error) { // unable to parse json
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
-    }
-
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    if (newAction.size() != 1) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(400);
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
-
-    if (obj == nullptr) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
-    }
-
-#ifndef WITHOUT_WS
-    obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus, device,
-                                     std::placeholders::_1));
-#endif
-
-    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
-    JsonObject item = respBuffer.to<JsonObject>();
-    obj->serialize(item, device->id);
-    String jsonStr;
-    serializeJson(item, jsonStr);
-    AsyncWebServerResponse *response =
-        request->beginResponse(201, "application/json", jsonStr);
-    request->send(response);
-
-    b_has_body_data = false;
-    memset(body_data, 0, sizeof(body_data));
-
-    obj->start();
   }
 
   void handleThingEventsGet(AsyncWebServerRequest *request,

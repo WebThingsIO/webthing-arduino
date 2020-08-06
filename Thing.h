@@ -98,9 +98,8 @@ public:
   void serialize(JsonObject obj, String deviceId) {
     JsonObject data = obj.createNestedObject(name);
 
-    JsonObject actionObj = actionRequest->as<JsonObject>();
-    JsonObject inner = actionObj[name];
-    data["input"] = inner["input"];
+    JsonObject actionRequestObj = actionRequest->as<JsonObject>();
+    data["input"] = actionRequestObj["input"];
 
     data["status"] = status;
     data["timeRequested"] = timeRequested;
@@ -109,7 +108,7 @@ public:
       data["timeCompleted"] = timeCompleted;
     }
 
-    data["href"] = "/things/" + deviceId + "/actions/" + name + "/" + id;
+    data["href"] = "/actions/" + name + "/" + id;
   }
 
   void setStatus(const char *s) {
@@ -125,9 +124,8 @@ public:
   void start() {
     setStatus("pending");
 
-    JsonObject actionObj = actionRequest->as<JsonObject>();
-    JsonObject inner = actionObj[name];
-    start_fn(inner["input"]);
+    JsonObject actionRequestObj = actionRequest->as<JsonObject>();
+    start_fn(actionRequestObj["input"]);
 
     finish();
   }
@@ -634,16 +632,10 @@ public:
     }
   }
 
-  ThingActionObject *requestAction(DynamicJsonDocument *actionRequest) {
+  ThingActionObject *requestAction(const char *name, DynamicJsonDocument *actionRequest) {
     JsonObject actionObj = actionRequest->as<JsonObject>();
 
-    // There should only be one key/value pair
-    JsonObject::iterator kv = actionObj.begin();
-    if (kv == actionObj.end()) {
-      return nullptr;
-    }
-
-    ThingAction *action = findAction(kv->key().c_str());
+    ThingAction *action = findAction(name);
     if (action == nullptr) {
       return nullptr;
     }
@@ -788,6 +780,7 @@ public:
       }
     }
 
+    // TODO: FIX THIS. Doesn't seem to be working.
     ThingAction *action = this->firstAction;
     if (action != nullptr) {
       JsonObject actions = descr.createNestedObject("actions");
