@@ -23,6 +23,6 @@
     ]
   },
   "examples": [
-    "examples/PlatformIO/*/src/*.cpp"
+    "examples/*/src/*.cpp"
   ]
 }
