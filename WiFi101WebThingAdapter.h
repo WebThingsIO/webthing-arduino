@@ -81,6 +81,7 @@ public:
   }
 
   void begin() {
+    beginTimeClient();
     name.toLowerCase();
 
     String serviceName = name + "._webthing";

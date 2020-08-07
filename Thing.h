@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "TimeUtils.h"
+
 #if !defined(ESP8266) && !defined(ESP32) && !defined(WITHOUT_WS)
 #define WITHOUT_WS 1
 #endif
@@ -72,9 +74,9 @@ public:
                     void (*cancel_fn_)())
       : start_fn(start_fn_), cancel_fn(cancel_fn_), name(name_),
         actionRequest(actionRequest_),
-        // TODO: Get actual time
         timeRequested("1970-01-01T00:00:00+00:00"), status("created") {
     generateId();
+    timeRequested = getTimeStampString();
   }
 
 #ifndef WITHOUT_WS
@@ -139,8 +141,7 @@ public:
   }
 
   void finish() {
-    // TODO: Get actual time
-    timeCompleted = "1970-01-01T00:00:00+00:00";
+    timeCompleted = getTimeStampString();
     setStatus("completed");
   }
 };
