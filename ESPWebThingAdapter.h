@@ -49,7 +49,7 @@ public:
         port(_port) {}
 
   void begin() {
-    // TODO: Code from addDevice to add thing to WS etc
+    beginTimeClient();
     name.toLowerCase();
     if (MDNS.begin(this->name.c_str())) {
       Serial.println("MDNS responder started");
