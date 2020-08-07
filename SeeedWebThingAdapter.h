@@ -39,8 +39,8 @@
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, IPAddress _ip, uint16_t _port = 80)
-      : server(_port), name(_name), ip(_ip.toString()), port(_port) {}
+  WebThingAdapter(ThingDevice *_thing, String _name, IPAddress _ip, uint16_t _port = 80)
+      : thing(_thing), server(_port), name(_name), ip(_ip.toString()), port(_port) {}
 
   void begin() {
     name.toLowerCase();
@@ -56,89 +56,70 @@ public:
     this->server.on("/*", HTTP_OPTIONS,
                     std::bind(&WebThingAdapter::handleOptions, this));
 
+    ThingDevice *device = this->thing;
+
     this->server.on("/", HTTP_GET,
-                    std::bind(&WebThingAdapter::handleThings, this));
+                    std::bind(&WebThingAdapter::handleThing, this, device));
 
-    ThingDevice *device = this->firstDevice;
-    while (device != nullptr) {
-      String deviceBase = "/things/" + device->id;
+    ThingProperty *property = device->firstProperty;
+    while (property != nullptr) {
+      String propertyBase = "/properties/" + property->id;
+      this->server.on(propertyBase.c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingPropertyGet,
+                                this, property));
+      this->server.on(propertyBase.c_str(), HTTP_PUT,
+                      std::bind(&WebThingAdapter::handleThingPropertyPut,
+                                this, device, property),
+                      std::bind(&WebThingAdapter::handleBody, this));
 
-      ThingProperty *property = device->firstProperty;
-      while (property != nullptr) {
-        String propertyBase = deviceBase + "/properties/" + property->id;
-        this->server.on(propertyBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingPropertyGet,
-                                  this, property));
-        this->server.on(propertyBase.c_str(), HTTP_PUT,
-                        std::bind(&WebThingAdapter::handleThingPropertyPut,
-                                  this, device, property),
-                        std::bind(&WebThingAdapter::handleBody, this));
-
-        property = (ThingProperty *)property->next;
-      }
-
-      ThingAction *action = device->firstAction;
-      while (action != nullptr) {
-        String actionBase = deviceBase + "/actions/" + action->id;
-        this->server.on(actionBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingActionGet, this,
-                                  device, action));
-        this->server.on(actionBase.c_str(), HTTP_POST,
-                        std::bind(&WebThingAdapter::handleThingActionPost,
-                                  this, device, action),
-                        std::bind(&WebThingAdapter::handleBody, this));
-        this->server.on(actionBase.c_str(), HTTP_DELETE,
-                        std::bind(&WebThingAdapter::handleThingActionDelete,
-                                  this, device, action));
-        action = (ThingAction *)action->next;
-      }
-
-      ThingEvent *event = device->firstEvent;
-      while (event != nullptr) {
-        String eventBase = deviceBase + "/events/" + event->id;
-        this->server.on(eventBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingEventGet, this,
-                                  device, event));
-        event = (ThingEvent *)event->next;
-      }
-
-      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingPropertiesGet,
-                                this, device->firstProperty));
-      this->server.on(
-          (deviceBase + "/actions").c_str(), HTTP_GET,
-          std::bind(&WebThingAdapter::handleThingActionsGet, this, device));
-      this->server.on(
-          (deviceBase + "/actions").c_str(), HTTP_POST,
-          std::bind(&WebThingAdapter::handleThingActionsPost, this, device),
-          std::bind(&WebThingAdapter::handleBody, this));
-      this->server.on(
-          (deviceBase + "/events").c_str(), HTTP_GET,
-          std::bind(&WebThingAdapter::handleThingEventsGet, this, device));
-      this->server.on(deviceBase.c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThing, this, device));
-
-      device = device->next;
+      property = (ThingProperty *)property->next;
     }
+
+    ThingAction *action = device->firstAction;
+    while (action != nullptr) {
+      String actionBase = "/actions/" + action->id;
+      this->server.on(actionBase.c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingActionGet, this,
+                                device, action));
+      this->server.on(actionBase.c_str(), HTTP_POST,
+                      std::bind(&WebThingAdapter::handleThingActionPost,
+                                this, device, action),
+                      std::bind(&WebThingAdapter::handleBody, this));
+      this->server.on(actionBase.c_str(), HTTP_DELETE,
+                      std::bind(&WebThingAdapter::handleThingActionDelete,
+                                this, device, action));
+      action = (ThingAction *)action->next;
+    }
+
+    ThingEvent *event = device->firstEvent;
+    while (event != nullptr) {
+      String eventBase = "/events/" + event->id;
+      this->server.on(eventBase.c_str(), HTTP_GET,
+                      std::bind(&WebThingAdapter::handleThingEventGet, this,
+                                device, event));
+      event = (ThingEvent *)event->next;
+    }
+
+    this->server.on(("/properties").c_str(), HTTP_GET,
+                    std::bind(&WebThingAdapter::handleThingPropertiesGet,
+                              this, device->firstProperty));
+    this->server.on(
+        ("/actions").c_str(), HTTP_GET,
+        std::bind(&WebThingAdapter::handleThingActionsGet, this, device));
+    this->server.on(
+        ("/events").c_str(), HTTP_GET,
+        std::bind(&WebThingAdapter::handleThingEventsGet, this, device));
+
 
     this->server.begin();
   }
 
   void update() { server.handleClient(); }
 
-  void addDevice(ThingDevice *device) {
-    if (this->lastDevice == nullptr) {
-      this->firstDevice = device;
-      this->lastDevice = device;
-    } else {
-      this->lastDevice->next = device;
-      this->lastDevice = device;
-    }
-  }
 
 private:
+  ThingDevice *thing = nullptr;
   WebServer server;
-
   String name;
   String ip;
   uint16_t port;
@@ -194,27 +175,6 @@ private:
     server.send(204);
   }
 
-  void handleThings() {
-    sendCORSHeaders();
-    if (!verifyHost()) {
-      return;
-    }
-
-    DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray things = buf.to<JsonArray>();
-    ThingDevice *device = this->firstDevice;
-    while (device != nullptr) {
-      JsonObject descr = things.createNestedObject();
-      device->serialize(descr, ip, port);
-      descr["href"] = "/things/" + device->id;
-      device = device->next;
-    }
-
-    String response;
-    serializeJson(things, response);
-    server.send(200, "application/json", response);
-  }
-
   void handleThing(ThingDevice *&device) {
     sendCORSHeaders();
     if (!verifyHost()) {
@@ -252,7 +212,7 @@ private:
     }
 
     String url = server.uri();
-    String base = "/things/" + device->id + "/actions/" + action->id;
+    String base = "/actions/" + action->id;
     if (url == base || url == base + "/") {
       DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
       JsonArray queue = doc.to<JsonArray>();
@@ -293,7 +253,7 @@ private:
     }
 
     String url = server.uri();
-    String base = "/things/" + device->id + "/actions/" + action->id;
+    String base = "/actions/" + action->id;
     if (url == base || url == base + "/") {
       server.send(404);
       return;
@@ -322,37 +282,26 @@ private:
       return;
     }
 
-    DynamicJsonDocument *newBuffer =
+    DynamicJsonDocument *newActionBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, (const char *)body_data);
+    auto error = deserializeJson(*newActionBuffer, (const char *)body_data);
     if (error) { // unable to parse json
       body_index = 0;
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       server.send(500);
-      delete newBuffer;
+      delete newActionBuffer;
       return;
     }
 
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    if (!newAction.containsKey(action->id)) {
-      body_index = 0;
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      server.send(400);
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
+    ThingActionObject *obj = device->requestAction(action->id.c_str(), newActionBuffer);
 
     if (obj == nullptr) {
       body_index = 0;
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       server.send(500);
-      delete newBuffer;
+      delete newActionBuffer;
       return;
     }
 
