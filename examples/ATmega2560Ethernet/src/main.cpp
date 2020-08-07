@@ -28,15 +28,6 @@ void setup(void) {
   digitalWrite(ledPin, HIGH);
   Serial.begin(115200);
 
-  // Set initial values
-  ThingPropertyValue ledTextValue;
-  ledTextValue.string = &lastText;
-  ledText.setValue(ledTextValue);
-
-  ThingPropertyValue initialLedLevel;
-  initialLedLevel.number = 500;
-  ledLevel.setValue(initialLedLevel);
-
   // Set up device
 
   // Add properties
