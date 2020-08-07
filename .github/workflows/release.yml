@@ -14,9 +14,9 @@ jobs:
         run: echo ::set-env name=RELEASE_VERSION::$(echo ${GITHUB_REF:11})
       - name: Package project
         run: |
-          mkdir webthing-arduino
-          cp -r CODE_OF_CONDUCT.md *.h LICENSE README.md library.* docs/ examples/ webthing-arduino/
-          zip -r webthing-arduino.zip webthing-arduino/
+          mkdir arduino-labthings
+          cp -r CODE_OF_CONDUCT.md *.h LICENSE README.md library.* docs/ examples/ arduino-labthings/
+          zip -r arduino-labthings.zip arduino-labthings/
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1.0.0
@@ -34,6 +34,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: webthing-arduino.zip
-          asset_name: webthing-arduino.zip
+          asset_path: arduino-labthings.zip
+          asset_name: arduino-labthings.zip
           asset_content_type: application/zip
