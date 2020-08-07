@@ -2,7 +2,7 @@
 #if !defined(ESP32) && !defined(ESP8266) && !defined(SEEED_WIO_TERMINAL)
 
 // TODO: Actually add an ethernet NTP client
-String getTimeStampString() { dest = "1980-01-01T00:00:00+00:00"; }
+String getTimeStampString() { return "1970-01-01T00:00:00+00:00"; }
 
 // If we're good to use WiFi
 #else
