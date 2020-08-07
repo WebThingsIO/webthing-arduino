@@ -67,8 +67,8 @@ enum ReadState {
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, uint32_t _ip, uint16_t _port = 80)
-      : name(_name), port(_port), server(_port), mdns(udp) {
+  WebThingAdapter(ThingDevice *_thing, String _name, uint32_t _ip, uint16_t _port = 80)
+      : thing(_thing), name(_name), port(_port), server(_port), mdns(udp) {
     ip = "";
     for (int i = 0; i < 4; i++) {
       ip += _ip & 0xff;
@@ -215,17 +215,8 @@ public:
     }
   }
 
-  void addDevice(ThingDevice *device) {
-    if (this->lastDevice == nullptr) {
-      this->firstDevice = device;
-      this->lastDevice = device;
-    } else {
-      this->lastDevice->next = device;
-      this->lastDevice = device;
-    }
-  }
-
 private:
+  ThingDevice *thing = nullptr;
   String name, ip;
   uint16_t port;
   WiFiServer server;
@@ -284,105 +275,92 @@ private:
       return;
     }
 
+    ThingDevice *device = this->thing;
+
     if (uri == "/") {
-      handleThings();
-      return;
-    }
-
-    ThingDevice *device = this->firstDevice;
-    while (device != nullptr) {
-      String deviceBase = "/things/" + device->id;
-
-      if (uri.startsWith(deviceBase)) {
-        if (uri == deviceBase) {
-          if (method == HTTP_GET || method == HTTP_OPTIONS) {
-            handleThing(device);
-          } else {
-            handleError();
-          }
-          return;
-        } else if (uri == deviceBase + "/properties") {
-          if (method == HTTP_GET || method == HTTP_OPTIONS) {
-            handleThingPropertiesGet(device->firstProperty);
-          } else {
-            handleError();
-          }
-          return;
-        } else if (uri == deviceBase + "/actions") {
-          if (method == HTTP_GET || method == HTTP_OPTIONS) {
-            handleThingActionsGet(device);
-          } else if (method == HTTP_POST) {
-            handleThingActionsPost(device);
-          } else {
-            handleError();
-          }
-          return;
-        } else if (uri == deviceBase + "/events") {
-          if (method == HTTP_GET || method == HTTP_OPTIONS) {
-            handleThingEventsGet(device);
-          } else {
-            handleError();
-          }
-          return;
-        } else {
-          ThingProperty *property = device->firstProperty;
-          while (property != nullptr) {
-            String propertyBase = deviceBase + "/properties/" + property->id;
-            if (uri == propertyBase) {
-              if (method == HTTP_GET || method == HTTP_OPTIONS) {
-                handleThingPropertyGet(property);
-              } else if (method == HTTP_PUT) {
-                handleThingPropertyPut(device, property);
-              } else {
-                handleError();
-              }
-              return;
-            }
-            property = (ThingProperty *)property->next;
-          }
-
-          ThingAction *action = device->firstAction;
-          while (action != nullptr) {
-            String actionBase = deviceBase + "/actions/" + action->id;
-            if (uri == actionBase) {
-              if (method == HTTP_GET || method == HTTP_OPTIONS) {
-                handleThingActionGet(device, action);
-              } else if (method == HTTP_POST) {
-                handleThingActionPost(device, action);
-              } else {
-                handleError();
-              }
-              return;
-            } else if (uri.startsWith(actionBase + "/") &&
-                       uri.length() > (actionBase.length() + 1)) {
-              if (method == HTTP_GET || method == HTTP_OPTIONS) {
-                handleThingActionIdGet(device, action);
-              } else if (method == HTTP_DELETE) {
-                handleThingActionIdDelete(device, action);
-              } else {
-                handleError();
-              }
-              return;
-            }
-            action = action->next;
-          }
-
-          ThingEvent *event = device->firstEvent;
-          while (event != nullptr) {
-            String eventBase = deviceBase + "/events/" + event->id;
-            if (uri == eventBase) {
-              if (method == HTTP_GET || method == HTTP_OPTIONS) {
-                handleThingEventGet(device, event);
-              } else {
-                handleError();
-              }
-              return;
-            }
-            event = (ThingEvent *)event->next;
-          }
-        }
+      if (method == HTTP_GET || method == HTTP_OPTIONS) {
+        handleThing(device);
+      } else {
+        handleError();
       }
-      device = device->next;
+      return;
+    } else if (uri == "/properties") {
+      if (method == HTTP_GET || method == HTTP_OPTIONS) {
+        handleThingPropertiesGet(device->firstProperty);
+      } else {
+        handleError();
+      }
+      return;
+    } else if (uri == "/actions") {
+      if (method == HTTP_GET || method == HTTP_OPTIONS) {
+        handleThingActionsGet(device);
+      } else {
+        handleError();
+      }
+      return;
+    } else if (uri == "/events") {
+      if (method == HTTP_GET || method == HTTP_OPTIONS) {
+        handleThingEventsGet(device);
+      } else {
+        handleError();
+      }
+      return;
+    } else {
+      ThingProperty *property = device->firstProperty;
+      while (property != nullptr) {
+        String propertyBase = "/properties/" + property->id;
+        if (uri == propertyBase) {
+          if (method == HTTP_GET || method == HTTP_OPTIONS) {
+            handleThingPropertyGet(property);
+          } else if (method == HTTP_PUT) {
+            handleThingPropertyPut(device, property);
+          } else {
+            handleError();
+          }
+          return;
+        }
+        property = (ThingProperty *)property->next;
+      }
+
+      ThingAction *action = device->firstAction;
+      while (action != nullptr) {
+        String actionBase = "/actions/" + action->id;
+        if (uri == actionBase) {
+          if (method == HTTP_GET || method == HTTP_OPTIONS) {
+            handleThingActionGet(device, action);
+          } else if (method == HTTP_POST) {
+            handleThingActionPost(device, action);
+          } else {
+            handleError();
+          }
+          return;
+        } else if (uri.startsWith(actionBase + "/") &&
+                    uri.length() > (actionBase.length() + 1)) {
+          if (method == HTTP_GET || method == HTTP_OPTIONS) {
+            handleThingActionIdGet(device, action);
+          } else if (method == HTTP_DELETE) {
+            handleThingActionIdDelete(device, action);
+          } else {
+            handleError();
+          }
+          return;
+        }
+        action = action->next;
+      }
+
+      ThingEvent *event = device->firstEvent;
+      while (event != nullptr) {
+        String eventBase = "/events/" + event->id;
+        if (uri == eventBase) {
+          if (method == HTTP_GET || method == HTTP_OPTIONS) {
+            handleThingEventGet(device, event);
+          } else {
+            handleError();
+          }
+          return;
+        }
+        event = (ThingEvent *)event->next;
+      }
     }
     handleError();
   }
@@ -402,25 +380,6 @@ private:
     client.println("Content-Type: application/json");
     client.println("Connection: close");
     client.println();
-  }
-
-  void handleThings() {
-    sendOk();
-    sendHeaders();
-
-    DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray things = buf.to<JsonArray>();
-    ThingDevice *device = this->firstDevice;
-    while (device != nullptr) {
-      JsonObject descr = things.createNestedObject();
-      device->serialize(descr, ip, port);
-      descr["href"] = "/things/" + device->id;
-      device = device->next;
-    }
-
-    serializeJson(things, client);
-    delay(1);
-    client.stop();
   }
 
   void handleThing(ThingDevice *device) {
@@ -503,28 +462,20 @@ private:
   }
 
   void handleThingActionPost(ThingDevice *device, ThingAction *action) {
-    DynamicJsonDocument *newBuffer =
+    DynamicJsonDocument *newActionBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, content);
+    auto error = deserializeJson(*newActionBuffer, content);
     if (error) { // unable to parse json
       handleError();
-      delete newBuffer;
+      delete newActionBuffer;
       return;
     }
 
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    if (!newAction.containsKey(action->id)) {
-      handleError();
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
+    ThingActionObject *obj = device->requestAction(action->id.c_str(), newActionBuffer);
 
     if (obj == nullptr) {
       handleError();
-      delete newBuffer;
+      delete newActionBuffer;
       return;
     }
 
@@ -579,45 +530,6 @@ private:
     serializeJson(queue, client);
     delay(1);
     client.stop();
-  }
-
-  void handleThingActionsPost(ThingDevice *device) {
-    DynamicJsonDocument *newBuffer =
-        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, content);
-    if (error) { // unable to parse json
-      handleError();
-      delete newBuffer;
-      return;
-    }
-
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    if (newAction.size() != 1) {
-      handleError();
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
-
-    if (obj == nullptr) {
-      handleError();
-      delete newBuffer;
-      return;
-    }
-
-    sendCreated();
-    sendHeaders();
-
-    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
-    JsonObject item = respBuffer.to<JsonObject>();
-    obj->serialize(item, device->id);
-    serializeJson(item, client);
-    delay(1);
-    client.stop();
-
-    obj->start();
   }
 
   void handleThingEventsGet(ThingDevice *device) {
