@@ -75,7 +75,6 @@ void setup(void) {
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  adapter = new WebThingAdapter("led-lamp", WiFi.localIP());
 
   lamp.description = "A web connected lamp";
 
@@ -107,7 +106,7 @@ void setup(void) {
   overheated.unit = "degree celsius";
   lamp.addEvent(&overheated);
 
-  adapter->addDevice(&lamp);
+  adapter = new WebThingAdapter(&lamp, "led-lamp", WiFi.localIP());
   adapter->begin();
 
   Serial.println("HTTP server started");

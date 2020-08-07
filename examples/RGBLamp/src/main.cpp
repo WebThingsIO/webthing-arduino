@@ -95,7 +95,6 @@ void setup(void) {
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  adapter = new WebThingAdapter("rgb-lamp", WiFi.localIP());
 
   device.addProperty(&deviceOn);
   ThingPropertyValue levelValue;
@@ -113,7 +112,7 @@ void setup(void) {
   deviceColor.setValue(colorValue);
   device.addProperty(&deviceColor);
 
-  adapter->addDevice(&device);
+  adapter = new WebThingAdapter(&device, "rgb-lamp", WiFi.localIP());
   Serial.println("Starting HTTP server");
   adapter->begin();
   Serial.print("http://");

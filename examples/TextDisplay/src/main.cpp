@@ -107,7 +107,6 @@ void setup() {
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  adapter = new WebThingAdapter("textdisplayer", WiFi.localIP());
 
   displayString(lastText);
 
@@ -116,7 +115,8 @@ void setup() {
   text.setValue(value);
 
   textDisplay.addProperty(&text);
-  adapter->addDevice(&textDisplay);
+
+  adapter = new WebThingAdapter(&textDisplay, "textdisplayer", WiFi.localIP());
   adapter->begin();
 }
 

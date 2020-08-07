@@ -36,14 +36,14 @@ void setup(void) {
 
   setupNetwork();
 
-  adapter = new WebThingAdapter("light-sensor", WiFi.localIP());
   property.readOnly = true;
   property.title = "Light Level";
   device.addProperty(&property);
-  adapter->addDevice(&device);
+
+  adapter = new WebThingAdapter(&device, "light-sensor", WiFi.localIP());
+  adapter->begin();
 
   Serial.println("Starting HTTP server");
-  adapter->begin();
   Serial.print("http://");
   Serial.print(WiFi.localIP());
   Serial.print("/things/");

@@ -45,12 +45,14 @@ void setup(void) {
   Serial.print("log: IP=");
   Serial.println(ip);
   delay(3000);
-  adapter = new WebThingAdapter("analog-sensor", ip);
+  
   property.unit = "percent";
   device.addProperty(&property);
-  adapter->addDevice(&device);
-  Serial.println("Starting HTTP server");
+
+  adapter = new WebThingAdapter(&device, "analog-sensor", ip);
   adapter->begin();
+
+  Serial.println("Starting HTTP server");
   Serial.print("http://");
   Serial.print(ip);
   Serial.print("/things/");

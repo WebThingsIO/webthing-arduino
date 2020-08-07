@@ -121,13 +121,14 @@ void setup() {
 
   // connected, make the LED stay on
   digitalWrite(LED_BUILTIN, PIN_STATE_HIGH);
-  adapter = new WebThingAdapter("weathersensor", WiFi.localIP());
+  
 
   weatherTemp.unit = "celsius";
   weather.addProperty(&weatherTemp);
   weather.addProperty(&weatherPres);
   weather.addProperty(&weatherHum);
-  adapter->addDevice(&weather);
+
+  adapter = new WebThingAdapter(&weather, "weathersensor", WiFi.localIP());
   adapter->begin();
 }
 

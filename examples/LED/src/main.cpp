@@ -60,10 +60,10 @@ void setup(void) {
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  adapter = new WebThingAdapter("w25", WiFi.localIP());
 
   led.addProperty(&ledOn);
-  adapter->addDevice(&led);
+
+  adapter = new WebThingAdapter(&led, "w25", WiFi.localIP());
   adapter->begin();
   Serial.println("HTTP server started");
   Serial.print("http://");

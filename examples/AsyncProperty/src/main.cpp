@@ -81,8 +81,6 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  adapter = new WebThingAdapter("asyncProperty", WiFi.localIP());
-
   ThingPropertyValue value;
   value.string = &message;
   text.setValue(value);
@@ -90,7 +88,8 @@ void setup() {
   textDisplay.addProperty(&text);
   textDisplay.addProperty(&onOff);
   textDisplay.addProperty(&number);
-  adapter->addDevice(&textDisplay);
+  
+  adapter = new WebThingAdapter(&textDisplay, "asyncProperty", WiFi.localIP());
   adapter->begin();
 }
 
