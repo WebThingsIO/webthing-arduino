@@ -9,6 +9,8 @@ A simple server for the ESP8266, the ESP32, boards with Ethernet, or any WiFi101
 
 ### PlatformIO
 
+Install the PlatformIO CLI via Python with `pip install platformio`.
+
 Add the `arduino-labthings` library through PlatformIO's package management interface. For example, in your projects `platformio.ini` file, include:
 
 ```ini
