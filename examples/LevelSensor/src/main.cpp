@@ -45,7 +45,7 @@ void setup(void) {
   Serial.print("log: IP=");
   Serial.println(ip);
   delay(3000);
-  
+
   property.unit = "percent";
   device.addProperty(&property);
 

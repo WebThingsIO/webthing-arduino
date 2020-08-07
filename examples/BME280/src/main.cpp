@@ -121,7 +121,6 @@ void setup() {
 
   // connected, make the LED stay on
   digitalWrite(LED_BUILTIN, PIN_STATE_HIGH);
-  
 
   weatherTemp.unit = "celsius";
   weather.addProperty(&weatherTemp);

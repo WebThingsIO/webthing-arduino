@@ -88,7 +88,7 @@ void setup() {
   textDisplay.addProperty(&text);
   textDisplay.addProperty(&onOff);
   textDisplay.addProperty(&number);
-  
+
   adapter = new WebThingAdapter(&textDisplay, "asyncProperty", WiFi.localIP());
   adapter->begin();
 }

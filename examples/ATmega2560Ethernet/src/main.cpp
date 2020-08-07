@@ -23,8 +23,7 @@ ThingProperty ledOn("on", "Mock LED on or off", BOOLEAN, "OnOffProperty");
 // Initial values
 bool lastOn = false;
 
-void setup(void)
-{
+void setup(void) {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
   Serial.begin(115200);
@@ -51,13 +50,11 @@ void setup(void)
   Serial.print(Ethernet.localIP());
 }
 
-void loop(void)
-{
+void loop(void) {
   adapter->update();
   bool on = ledOn.getValue().boolean;
   digitalWrite(ledPin, on ? LOW : HIGH); // active low led
-  if (on != lastOn)
-  {
+  if (on != lastOn) {
     Serial.print(led.id);
     Serial.print(": ");
     Serial.println(on);
