@@ -102,14 +102,14 @@ public:
       event = (ThingEvent *)event->next;
     }
 
-    this->server.on(("/properties").c_str(), HTTP_GET,
+    this->server.on(("/properties"), HTTP_GET,
                     std::bind(&WebThingAdapter::handleThingPropertiesGet, this,
                               device->firstProperty));
     this->server.on(
-        ("/actions").c_str(), HTTP_GET,
+        ("/actions"), HTTP_GET,
         std::bind(&WebThingAdapter::handleThingActionsGet, this, device));
     this->server.on(
-        ("/events").c_str(), HTTP_GET,
+        ("/events"), HTTP_GET,
         std::bind(&WebThingAdapter::handleThingEventsGet, this, device));
 
     this->server.begin();
