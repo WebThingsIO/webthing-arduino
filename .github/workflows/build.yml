@@ -31,4 +31,4 @@ jobs:
         platformio update
     - name: Test examples
       run: |
-        for dir in examples/PlatformIO/*; do platformio run --project-dir "$dir"; done
+        for dir in examples/*; do platformio run --project-dir "$dir"; done
