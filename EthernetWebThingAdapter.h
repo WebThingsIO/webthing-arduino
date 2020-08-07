@@ -93,7 +93,7 @@ public:
   void begin() {
     name.toLowerCase();
 #ifdef CONFIG_MDNS
-    String serviceName = name + "._webthing";
+    String serviceName = name + "._labthing";
     mdns.begin(Ethernet.localIP(), name.c_str());
     // \x06 is the length of the record
     mdns.addServiceRecord(serviceName.c_str(), port, MDNSServiceTCP,

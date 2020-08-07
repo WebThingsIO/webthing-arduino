@@ -48,8 +48,8 @@ public:
       Serial.println("MDNS responder started");
     }
 
-    MDNS.addService("webthing", "tcp", port);
-    MDNS.addServiceTxt("webthing", "tcp", "path", "/");
+    MDNS.addService("labthing", "tcp", port);
+    MDNS.addServiceTxt("labthing", "tcp", "path", "/");
 
     this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this));
 
