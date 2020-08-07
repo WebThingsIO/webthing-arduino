@@ -67,7 +67,8 @@ enum ReadState {
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(ThingDevice *_thing, String _name, uint32_t _ip, uint16_t _port = 80)
+  WebThingAdapter(ThingDevice *_thing, String _name, uint32_t _ip,
+                  uint16_t _port = 80)
       : thing(_thing), name(_name), port(_port), server(_port), mdns(udp) {
     ip = "";
     for (int i = 0; i < 4; i++) {
@@ -335,7 +336,7 @@ private:
           }
           return;
         } else if (uri.startsWith(actionBase + "/") &&
-                    uri.length() > (actionBase.length() + 1)) {
+                   uri.length() > (actionBase.length() + 1)) {
           if (method == HTTP_GET || method == HTTP_OPTIONS) {
             handleThingActionIdGet(device, action);
           } else if (method == HTTP_DELETE) {
@@ -471,7 +472,8 @@ private:
       return;
     }
 
-    ThingActionObject *obj = device->requestAction(action->id.c_str(), newActionBuffer);
+    ThingActionObject *obj =
+        device->requestAction(action->id.c_str(), newActionBuffer);
 
     if (obj == nullptr) {
       handleError();

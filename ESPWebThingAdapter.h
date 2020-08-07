@@ -43,8 +43,10 @@
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(ThingDevice *_thing, String _name, IPAddress _ip, uint16_t _port = 80)
-      : thing(_thing), server(_port), name(_name), ip(_ip.toString()), port(_port) {}
+  WebThingAdapter(ThingDevice *_thing, String _name, IPAddress _ip,
+                  uint16_t _port = 80)
+      : thing(_thing), server(_port), name(_name), ip(_ip.toString()),
+        port(_port) {}
 
   void begin() {
     // TODO: Code from addDevice to add thing to WS etc
@@ -80,12 +82,11 @@ public:
     while (property != nullptr) {
       String propertyBase = "/properties/" + property->id;
       this->server.on(propertyBase.c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingPropertyGet,
-                                this, std::placeholders::_1, property));
+                      std::bind(&WebThingAdapter::handleThingPropertyGet, this,
+                                std::placeholders::_1, property));
       this->server.on(propertyBase.c_str(), HTTP_PUT,
-                      std::bind(&WebThingAdapter::handleThingPropertyPut,
-                                this, std::placeholders::_1, this->thing,
-                                property),
+                      std::bind(&WebThingAdapter::handleThingPropertyPut, this,
+                                std::placeholders::_1, this->thing, property),
                       NULL,
                       std::bind(&WebThingAdapter::handleBody, this,
                                 std::placeholders::_1, std::placeholders::_2,
@@ -102,8 +103,8 @@ public:
                       std::bind(&WebThingAdapter::handleThingActionGet, this,
                                 std::placeholders::_1, this->thing, action));
       this->server.on(actionBase.c_str(), HTTP_POST,
-                      std::bind(&WebThingAdapter::handleThingActionPost,
-                                this, std::placeholders::_1, this->thing, action),
+                      std::bind(&WebThingAdapter::handleThingActionPost, this,
+                                std::placeholders::_1, this->thing, action),
                       NULL,
                       std::bind(&WebThingAdapter::handleBody, this,
                                 std::placeholders::_1, std::placeholders::_2,
@@ -126,8 +127,8 @@ public:
     }
 
     this->server.on("/properties", HTTP_GET,
-                    std::bind(&WebThingAdapter::handleThingPropertiesGet,
-                              this, std::placeholders::_1,
+                    std::bind(&WebThingAdapter::handleThingPropertiesGet, this,
+                              std::placeholders::_1,
                               this->thing->firstProperty));
     this->server.on("/actions", HTTP_GET,
                     std::bind(&WebThingAdapter::handleThingActionsGet, this,
@@ -162,7 +163,6 @@ public:
     sendChangedProperties(this->thing);
 #endif
   }
-
 
 private:
   ThingDevice *thing = nullptr;
@@ -260,7 +260,8 @@ private:
           actionObj[kvInner.key()] = kvInner.value();
         }
 
-        ThingActionObject *obj = device->requestAction(kv.key().c_str(), actionRequest);
+        ThingActionObject *obj =
+            device->requestAction(kv.key().c_str(), actionRequest);
         if (obj != nullptr) {
           obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus,
                                            device, std::placeholders::_1));
@@ -437,7 +438,8 @@ private:
       return;
     }
 
-    ThingActionObject *obj = device->requestAction(action->id.c_str(), newActionBuffer);
+    ThingActionObject *obj =
+        device->requestAction(action->id.c_str(), newActionBuffer);
 
     if (obj == nullptr) {
       b_has_body_data = false;

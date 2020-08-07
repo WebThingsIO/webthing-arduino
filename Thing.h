@@ -634,7 +634,8 @@ public:
     }
   }
 
-  ThingActionObject *requestAction(const char *name, DynamicJsonDocument *actionRequest) {
+  ThingActionObject *requestAction(const char *name,
+                                   DynamicJsonDocument *actionRequest) {
 
     ThingAction *action = findAction(name);
     if (action == nullptr) {
@@ -791,7 +792,6 @@ public:
         action = action->next;
       }
     }
-
 
     // TODO: FIX THIS. Doesn't seem to be working.
     ThingEvent *event = this->firstEvent;
