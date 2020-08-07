@@ -369,65 +369,6 @@ private:
     server.send(200, "application/json", response);
   }
 
-  void handleThingActionsPost(ThingDevice *device) {
-    sendCORSHeaders();
-    if (!verifyHost()) {
-      return;
-    }
-
-    if (!b_has_body_data) {
-      server.send(422); // unprocessable entity (b/c no body)
-      return;
-    }
-
-    DynamicJsonDocument *newBuffer =
-        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, (const char *)body_data);
-    if (error) { // unable to parse json
-      body_index = 0;
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      server.send(500);
-      delete newBuffer;
-      return;
-    }
-
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    if (newAction.size() != 1) {
-      body_index = 0;
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      server.send(400);
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
-
-    if (obj == nullptr) {
-      body_index = 0;
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      server.send(500);
-      delete newBuffer;
-      return;
-    }
-
-    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
-    JsonObject item = respBuffer.to<JsonObject>();
-    obj->serialize(item, device->id);
-    String jsonStr;
-    serializeJson(item, jsonStr);
-    server.send(201, "application/json", jsonStr);
-
-    body_index = 0;
-    b_has_body_data = false;
-    memset(body_data, 0, sizeof(body_data));
-
-    obj->start();
-  }
-
   void handleThingEventsGet(ThingDevice *device) {
     sendCORSHeaders();
     if (!verifyHost()) {
