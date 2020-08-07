@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "TimeUtils.h"
+
 #if defined(SEEED_WIO_TERMINAL)
 
 #include <ArduinoJson.h>

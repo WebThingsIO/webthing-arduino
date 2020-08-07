@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "TimeUtils.h"
+
 #if !defined(ESP32) && !defined(ESP8266) && !defined(SEEED_WIO_TERMINAL)
 
 #include <Arduino.h>

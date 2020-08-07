@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "TimeUtils.h"
+
 #if !defined(ESP32) && !defined(ESP8266)
 
 #include <Arduino.h>
