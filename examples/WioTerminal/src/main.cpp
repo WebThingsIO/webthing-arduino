@@ -1,6 +1,6 @@
 #include <AtWiFi.h>
 #include "Thing.h"
-#include "WebThingAdapter.h"
+#include "SeeedWebThingAdapter.h"
 
 // TODO: Hardcode your wifi credentials here (and keep it private)
 const char *ssid = "public";
