@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mozilla-iot/webthing-arduino"
+    "url": "https://github.com/WebThingsIO/webthing-arduino.git"
   },
   "license": "Mozilla Public License Version 2.0",
   "platforms": "espressif8266,espressif32,atmelavr,atmelsam",
