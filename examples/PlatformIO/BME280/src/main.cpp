@@ -1,5 +1,5 @@
 /*
-  WiFi Web Server LED control via web of things (e.g., iot.mozilla.org gateway)
+  WiFi Web Server LED control via web of things (e.g., WebThings Gateway)
   based on WiFi101.h example "Provisioning_WiFiWebServer.ino"
 
  A simple web server that lets you control an LED via the web.

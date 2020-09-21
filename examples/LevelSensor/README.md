@@ -80,10 +80,10 @@ Of course this could be adapted to other devices or sensor
 
 ## RESOURCES: ##
 
-* https://github.com/mozilla-iot/webthing-arduino/
+* https://github.com/WebThingsIO/webthing-arduino/
 * https://www.arduinolibraries.info/libraries/webthing-arduino
 * https://iot.mozilla.org/
+* https://webthings.io/
 * https://discourse.mozilla.org/t/esp-adapter/26664/9
 * https://discourse.mozilla.org/t/esp32-demo/28297
 * https://s-opensource.org/author/philcovalsamsungcom/ 
-* irc://irc.mozilla.org/#iot
