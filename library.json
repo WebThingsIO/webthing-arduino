@@ -12,18 +12,81 @@
     "type": "git",
     "url": "https://github.com/WebThingsIO/webthing-arduino.git"
   },
-  "license": "Mozilla Public License Version 2.0",
+  "license": "MPL-2.0",
+  "frameworks": "arduino",
   "platforms": "espressif8266,espressif32,atmelavr,atmelsam",
   "dependencies": {
-    "ArduinoJson": "^6.15.0"
+    "bblanchon/ArduinoJson": "^6.15.0"
   },
   "export": {
-    "include": [
-      "*.cpp",
-      "*.h"
+    "exclude": [
+      "docs"
     ]
   },
   "examples": [
-    "examples/PlatformIO/*/src/*.cpp"
+    {
+      "name": "AsyncProperty",
+      "base": "examples/PlatformIO/AsyncProperty",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    },
+    {
+      "name": "BME280",
+      "base": "examples/PlatformIO/BME280",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    },
+    {
+      "name": "LED",
+      "base": "examples/PlatformIO/LED",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    },
+    {
+      "name": "LEDLamp",
+      "base": "examples/PlatformIO/LEDLamp",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    },
+    {
+      "name": "LevelSensor",
+      "base": "examples/PlatformIO/LevelSensor",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    },
+    {
+      "name": "RGBLamp",
+      "base": "examples/PlatformIO/RGBLamp",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    },
+    {
+      "name": "TextDisplay",
+      "base": "examples/PlatformIO/TextDisplay",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    },
+    {
+      "name": "WioTerminal",
+      "base": "examples/PlatformIO/WioTerminal",
+      "files": [
+        "platformio.ini",
+        "src/main.cpp"
+      ]      
+    }
   ]
 }
