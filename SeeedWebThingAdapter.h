@@ -168,7 +168,8 @@ private:
       host.remove(colonIndex);
     }
 
-    if (host == name + ".local" || host == ip || host == "localhost") {
+    if (host.equalsIgnoreCase(name + ".local") || host == ip ||
+        host == "localhost") {
       return true;
     }
 
