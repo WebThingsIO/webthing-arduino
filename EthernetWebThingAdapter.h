@@ -264,7 +264,7 @@ private:
     if (colonIndex >= 0) {
       host.remove(colonIndex);
     }
-    if (host == name + ".local") {
+    if (host.equalsIgnoreCase(name + ".local")) {
       return true;
     }
     if (host == ip) {

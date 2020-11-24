@@ -213,7 +213,8 @@ private:
     if (colonIndex >= 0) {
       value.remove(colonIndex);
     }
-    if (value == name + ".local" || value == ip || value == "localhost") {
+    if (value.equalsIgnoreCase(name + ".local") || value == ip ||
+        value == "localhost") {
       return true;
     }
     request->send(403);
