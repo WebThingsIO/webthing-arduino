@@ -16,7 +16,7 @@
   "frameworks": "arduino",
   "platforms": "espressif8266,espressif32,atmelavr,atmelsam",
   "dependencies": {
-    "bblanchon/ArduinoJson": "^6.15.0"
+    "bblanchon/ArduinoJson": "^6.17.0"
   },
   "export": {
     "exclude": [
@@ -75,14 +75,6 @@
     {
       "name": "TextDisplay",
       "base": "examples/PlatformIO/TextDisplay",
-      "files": [
-        "platformio.ini",
-        "src/main.cpp"
-      ]      
-    },
-    {
-      "name": "WioTerminal",
-      "base": "examples/PlatformIO/WioTerminal",
       "files": [
         "platformio.ini",
         "src/main.cpp"
