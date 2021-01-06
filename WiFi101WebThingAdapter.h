@@ -68,7 +68,7 @@ enum ReadState {
 class WebThingAdapter {
 public:
   WebThingAdapter(String _name, uint32_t _ip, uint16_t _port = 80,
-                  bool _disableHostValidation)
+                  bool _disableHostValidation = false)
       : name(_name), port(_port), server(_port),
         disableHostValidation(_disableHostValidation), mdns(udp) {
     ip = "";
