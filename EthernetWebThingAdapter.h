@@ -73,8 +73,10 @@ enum ReadState {
 
 class WebThingAdapter {
 public:
-  WebThingAdapter(String _name, uint32_t _ip, uint16_t _port = 80)
-      : name(_name), port(_port), server(_port)
+  WebThingAdapter(String _name, uint32_t _ip, uint16_t _port = 80,
+                  bool _disableHostValidation = false)
+      : name(_name), port(_port), server(_port),
+        disableHostValidation(_disableHostValidation)
 #ifdef CONFIG_MDNS
         ,
         mdns(udp)
@@ -240,6 +242,7 @@ public:
 private:
   String name, ip;
   uint16_t port;
+  bool disableHostValidation;
   EthernetServer server;
   EthernetClient client;
 #ifdef CONFIG_MDNS
@@ -260,6 +263,10 @@ private:
   ThingDevice *firstDevice = nullptr, *lastDevice = nullptr;
 
   bool verifyHost() {
+    if (disableHostValidation) {
+      return true;
+    }
+
     int colonIndex = host.indexOf(':');
     if (colonIndex >= 0) {
       host.remove(colonIndex);
