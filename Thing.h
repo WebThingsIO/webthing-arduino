@@ -698,7 +698,7 @@ public:
   void serialize(JsonObject descr, String ip, uint16_t port) {
     descr["id"] = this->id;
     descr["title"] = this->title;
-    descr["@context"] = "https://iot.mozilla.org/schemas";
+    descr["@context"] = "https://webthings.io/schemas";
 
     if (this->description != "") {
       descr["description"] = this->description;
