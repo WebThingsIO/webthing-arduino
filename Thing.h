@@ -99,8 +99,7 @@ public:
     JsonObject data = obj.createNestedObject(name);
 
     JsonObject actionObj = actionRequest->as<JsonObject>();
-    JsonObject inner = actionObj[name];
-    data["input"] = inner["input"];
+    data["input"] = actionObj;
 
     data["status"] = status;
     data["timeRequested"] = timeRequested;
@@ -126,8 +125,7 @@ public:
     setStatus("pending");
 
     JsonObject actionObj = actionRequest->as<JsonObject>();
-    JsonObject inner = actionObj[name];
-    start_fn(inner["input"]);
+    start_fn(actionObj);
 
     finish();
   }
@@ -197,7 +195,7 @@ public:
     // 2.11 Action object: A links array (An array of Link objects linking
     // to one or more representations of an Action resource, each with an
     // implied default rel=action.)
-    JsonArray inline_links = obj.createNestedArray("links");
+    JsonArray inline_links = obj.createNestedArray("forms");
     JsonObject inline_links_prop = inline_links.createNestedObject();
     inline_links_prop["href"] = "/things/" + deviceId + "/actions/" + id;
   }
@@ -297,7 +295,7 @@ public:
     // 2.9 Property object: A links array (An array of Link objects linking
     // to one or more representations of a Property resource, each with an
     // implied default rel=property.)
-    JsonArray inline_links = obj.createNestedArray("links");
+    JsonArray inline_links = obj.createNestedArray("forms");
     JsonObject inline_links_prop = inline_links.createNestedObject();
     inline_links_prop["href"] =
         "/things/" + deviceId + "/" + resourceType + "/" + id;
@@ -460,8 +458,6 @@ public:
       data["data"] = *this->getValue().string;
       break;
     }
-
-    data["timestamp"] = timestamp;
   }
 };
 
@@ -696,9 +692,11 @@ public:
   }
 
   void serialize(JsonObject descr, String ip, uint16_t port) {
-    descr["id"] = this->id;
+    descr["id"] = "uri:" + this->id;
     descr["title"] = this->title;
-    descr["@context"] = "https://webthings.io/schemas";
+
+    JsonArray context = descr.createNestedArray("@context");
+    context.add("https://www.w3.org/2019/wot/td/v1");
 
     if (this->description != "") {
       descr["description"] = this->description;
@@ -715,7 +713,8 @@ public:
         descr.createNestedObject("securityDefinitions");
     JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
-    descr["security"] = "nosec_sc";
+    JsonArray securityJson = descr.createNestedArray("security");
+    securityJson.add("nosec_sc");
 
     JsonArray typeJson = descr.createNestedArray("@type");
     const char **type = this->type;
@@ -724,43 +723,33 @@ public:
       type++;
     }
 
-    JsonArray links = descr.createNestedArray("links");
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "properties";
-      links_prop["href"] = "/things/" + this->id + "/properties";
-    }
-
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "actions";
-      links_prop["href"] = "/things/" + this->id + "/actions";
-    }
-
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "events";
-      links_prop["href"] = "/things/" + this->id + "/events";
-    }
-
-#ifndef WITHOUT_WS
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "alternate";
-
-      if (port != 80) {
-        char buffer[33];
-        itoa(port, buffer, 10);
-        links_prop["href"] =
-            "ws://" + ip + ":" + buffer + "/things/" + this->id;
-      } else {
-        links_prop["href"] = "ws://" + ip + "/things/" + this->id;
-      }
-    }
-#endif
-
     ThingProperty *property = this->firstProperty;
     if (property != nullptr) {
+      JsonArray forms = descr.createNestedArray("forms");
+      JsonObject forms_prop = forms.createNestedObject();
+      forms_prop["rel"] = "properties";
+      JsonArray context = forms_prop.createNestedArray("op");
+      context.add("readallproperties");
+      context.add("writeallproperties");
+      forms_prop["href"] = "/things/" + this->id + "/properties";
+
+
+      #ifndef WITHOUT_WS
+          {
+            JsonObject forms_prop = forms.createNestedObject();
+            //links_prop["rel"] = "alternate";
+
+            if (port != 80) {
+              char buffer[33];
+              itoa(port, buffer, 10);
+              forms_prop["href"] =
+                  "ws://" + ip + ":" + buffer + "/things/" + this->id;
+            } else {
+              forms_prop["href"] = "ws://" + ip + "/things/" + this->id;
+            }
+          }
+      #endif
+
       JsonObject properties = descr.createNestedObject("properties");
       while (property != nullptr) {
         JsonObject obj = properties.createNestedObject(property->id);

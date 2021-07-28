@@ -55,7 +55,7 @@ public:
     }
 
     MDNS.addService("webthing", "tcp", port);
-    MDNS.addServiceTxt("webthing", "tcp", "path", "/");
+    MDNS.addServiceTxt("webthing", "tcp", "path", "/.well-known/wot-thing-description");
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods",
@@ -70,7 +70,7 @@ public:
     this->server.on("/*", HTTP_OPTIONS,
                     std::bind(&WebThingAdapter::handleOptions, this,
                               std::placeholders::_1));
-    this->server.on("/", HTTP_GET,
+    this->server.on("/.well-known/wot-thing-description", HTTP_GET,
                     std::bind(&WebThingAdapter::handleThings, this,
                               std::placeholders::_1));
 
@@ -131,17 +131,7 @@ public:
                       std::bind(&WebThingAdapter::handleThingPropertiesGet,
                                 this, std::placeholders::_1,
                                 device->firstProperty));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingActionsGet, this,
-                                std::placeholders::_1, device));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_POST,
-                      std::bind(&WebThingAdapter::handleThingActionsPost, this,
-                                std::placeholders::_1, device),
-                      NULL,
-                      std::bind(&WebThingAdapter::handleBody, this,
-                                std::placeholders::_1, std::placeholders::_2,
-                                std::placeholders::_3, std::placeholders::_4,
-                                std::placeholders::_5));
+
       this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
                       std::bind(&WebThingAdapter::handleThingEventsGet, this,
                                 std::placeholders::_1, device));
@@ -362,16 +352,15 @@ private:
         request->beginResponseStream("application/json");
 
     DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray things = buf.to<JsonArray>();
+    JsonObject thing = buf.to<JsonObject>();
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
-      JsonObject descr = things.createNestedObject();
-      device->serialize(descr, ip, port);
-      descr["href"] = "/things/" + device->id;
+      device->serialize(thing, ip, port);
+      thing["href"] = "/things/" + device->id;
       device = device->next;
     }
 
-    serializeJson(things, *response);
+    serializeJson(thing, *response);
     request->send(response);
   }
 
@@ -474,6 +463,7 @@ private:
   void handleThingActionPost(AsyncWebServerRequest *request,
                              ThingDevice *device, ThingAction *action) {
     if (!verifyHost(request)) {
+      Serial.println("Invalid Host");
       return;
     }
 
@@ -486,6 +476,7 @@ private:
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
     auto error = deserializeJson(*newBuffer, (const char *)body_data);
     if (error) { // unable to parse json
+      Serial.println("Unable to parse JSON");
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       request->send(500);
@@ -493,24 +484,11 @@ private:
       return;
     }
 
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    if (!newAction.containsKey(action->id)) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(400);
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
-
+    ThingActionObject *obj = action->create(newBuffer);
     if (obj == nullptr) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
+        memset(body_data, 0, sizeof(body_data));
+        request->send(500);
+        return;
     }
 
 #ifndef WITHOUT_WS
@@ -567,84 +545,7 @@ private:
     request->send(response);
   }
 
-  void handleThingActionsGet(AsyncWebServerRequest *request,
-                             ThingDevice *device) {
-    if (!verifyHost(request)) {
-      return;
-    }
-    AsyncResponseStream *response =
-        request->beginResponseStream("application/json");
-
-    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray queue = doc.to<JsonArray>();
-    device->serializeActionQueue(queue);
-    serializeJson(queue, *response);
-    request->send(response);
-  }
-
-  void handleThingActionsPost(AsyncWebServerRequest *request,
-                              ThingDevice *device) {
-    if (!verifyHost(request)) {
-      return;
-    }
-
-    if (!b_has_body_data) {
-      request->send(422); // unprocessable entity (b/c no body)
-      return;
-    }
-
-    DynamicJsonDocument *newBuffer =
-        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, (const char *)body_data);
-    if (error) { // unable to parse json
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
-    }
-
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    if (newAction.size() != 1) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(400);
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
-
-    if (obj == nullptr) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
-    }
-
-#ifndef WITHOUT_WS
-    obj->setNotifyFunction(std::bind(&ThingDevice::sendActionStatus, device,
-                                     std::placeholders::_1));
-#endif
-
-    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
-    JsonObject item = respBuffer.to<JsonObject>();
-    obj->serialize(item, device->id);
-    String jsonStr;
-    serializeJson(item, jsonStr);
-    AsyncWebServerResponse *response =
-        request->beginResponse(201, "application/json", jsonStr);
-    request->send(response);
-
-    b_has_body_data = false;
-    memset(body_data, 0, sizeof(body_data));
-
-    obj->start();
-  }
-
-  void handleThingEventsGet(AsyncWebServerRequest *request,
+void handleThingEventsGet(AsyncWebServerRequest *request,
                             ThingDevice *device) {
     if (!verifyHost(request)) {
       return;
