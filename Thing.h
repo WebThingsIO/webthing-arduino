@@ -197,7 +197,7 @@ public:
     // 2.11 Action object: A links array (An array of Link objects linking
     // to one or more representations of an Action resource, each with an
     // implied default rel=action.)
-    JsonArray inline_links = obj.createNestedArray("links");
+    JsonArray inline_links = obj.createNestedArray("forms");
     JsonObject inline_links_prop = inline_links.createNestedObject();
     inline_links_prop["href"] = "/things/" + deviceId + "/actions/" + id;
   }
@@ -297,7 +297,7 @@ public:
     // 2.9 Property object: A links array (An array of Link objects linking
     // to one or more representations of a Property resource, each with an
     // implied default rel=property.)
-    JsonArray inline_links = obj.createNestedArray("links");
+    JsonArray inline_links = obj.createNestedArray("forms");
     JsonObject inline_links_prop = inline_links.createNestedObject();
     inline_links_prop["href"] =
         "/things/" + deviceId + "/" + resourceType + "/" + id;
@@ -724,7 +724,7 @@ public:
       type++;
     }
 
-    JsonArray links = descr.createNestedArray("links");
+    JsonArray links = descr.createNestedArray("forms");
     {
       JsonObject links_prop = links.createNestedObject();
       links_prop["rel"] = "properties";
