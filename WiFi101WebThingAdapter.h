@@ -308,7 +308,7 @@ private:
             handleError();
           }
           return;
-        } else if (uri == deviceBase + "/properties") {
+        } /*else if (uri == deviceBase + "/properties") {
           if (method == HTTP_GET || method == HTTP_OPTIONS) {
             handleThingPropertiesGet(device->firstProperty);
           } else {
@@ -330,7 +330,7 @@ private:
           } else {
             handleError();
           }
-          return;
+          return;*/
         } else {
           ThingProperty *property = device->firstProperty;
           while (property != nullptr) {
