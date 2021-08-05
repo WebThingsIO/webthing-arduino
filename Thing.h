@@ -461,7 +461,7 @@ public:
       break;
     }
 
-    data["timestamp"] = timestamp;
+    //data["timestamp"] = timestamp;
   }
 };
 
@@ -695,10 +695,10 @@ public:
 #endif
   }
 
-  void serialize(JsonObject descr, String ip, uint16_t port) {
+  void serialize(JbsonObject descr, String ip, uint16_t port) {
     descr["id"] = this->id;
     descr["title"] = this->title;
-    descr["@context"] = "https://webthings.io/schemas";
+    descr["@context"] = "  https://www.w3.org/2019/wot/td/v1";
 
     if (this->description != "") {
       descr["description"] = this->description;
@@ -723,17 +723,15 @@ public:
       typeJson.add(*type);
       type++;
     }
-
+    /*
     JsonArray links = descr.createNestedArray("forms");
     {
       JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "properties";
       links_prop["href"] = "/things/" + this->id + "/properties";
     }
 
     {
       JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "actions";
       links_prop["href"] = "/things/" + this->id + "/actions";
     }
 
@@ -742,11 +740,12 @@ public:
       links_prop["rel"] = "events";
       links_prop["href"] = "/things/" + this->id + "/events";
     }
+    */
 
 #ifndef WITHOUT_WS
     {
       JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "alternate";
+      //links_prop["rel"] = "alternate";
 
       if (port != 80) {
         char buffer[33];
