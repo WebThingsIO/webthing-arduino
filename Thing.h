@@ -695,7 +695,7 @@ public:
 #endif
   }
 
-  void serialize(JbsonObject descr, String ip, uint16_t port) {
+  void serialize(JsonObject descr, String ip, uint16_t port) {
     descr["id"] = this->id;
     descr["title"] = this->title;
     descr["@context"] = "  https://www.w3.org/2019/wot/td/v1";
