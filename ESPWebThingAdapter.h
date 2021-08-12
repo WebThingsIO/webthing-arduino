@@ -228,16 +228,15 @@ private:
         request->beginResponseStream("application/json");
 
     DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray things = buf.to<JsonArray>();
+    JsonObject thing = buf.to<JsonObject>();
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
-      JsonObject descr = things.createNestedObject();
-      device->serialize(descr, ip, port);
-      descr["href"] = "/things/" + device->id;
+      device->serialize(thing, ip, port);
+      thing["href"] = "/things/" + device->id;
       device = device->next;
     }
 
-    serializeJson(things, *response);
+    serializeJson(thing, *response);
     request->send(response);
   }
 
