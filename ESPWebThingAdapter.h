@@ -55,7 +55,7 @@ public:
     }
 
     MDNS.addService("webthing", "tcp", port);
-    MDNS.addServiceTxt("webthing", "tcp", "path", "/");
+    MDNS.addServiceTxt("webthing", "tcp", "path", "/.well-known/wot-thing-description");
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods",
@@ -70,7 +70,7 @@ public:
     this->server.on("/*", HTTP_OPTIONS,
                     std::bind(&WebThingAdapter::handleOptions, this,
                               std::placeholders::_1));
-    this->server.on("/", HTTP_GET,
+    this->server.on("/.well-known/wot-thing-description", HTTP_GET,
                     std::bind(&WebThingAdapter::handleThings, this,
                               std::placeholders::_1));
 
