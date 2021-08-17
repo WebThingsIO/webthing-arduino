@@ -308,30 +308,8 @@ private:
             handleError();
           }
           return;
-        } /*else if (uri == deviceBase + "/properties") {
-          if (method == HTTP_GET || method == HTTP_OPTIONS) {
-            handleThingPropertiesGet(device->firstProperty);
-          } else {
-            handleError();
-          }
-          return;
-        } else if (uri == deviceBase + "/actions") {
-          if (method == HTTP_GET || method == HTTP_OPTIONS) {
-            handleThingActionsGet(device);
-          } else if (method == HTTP_POST) {
-            handleThingActionsPost(device);
-          } else {
-            handleError();
-          }
-          return;
-        } else if (uri == deviceBase + "/events") {
-          if (method == HTTP_GET || method == HTTP_OPTIONS) {
-            handleThingEventsGet(device);
-          } else {
-            handleError();
-          }
-          return;*/
-        } else {
+        } 
+      } else {
           ThingProperty *property = device->firstProperty;
           while (property != nullptr) {
             String propertyBase = deviceBase + "/properties/" + property->id;

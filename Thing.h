@@ -385,8 +385,6 @@ public:
       data["data"] = *this->getValue().string;
       break;
     }
-
-    //data["timestamp"] = timestamp;
   }
 };
 
