@@ -11,4 +11,3 @@
 #pragma once
 
 #include "ESPWebThingAdapter.h"
-#include "WiFi101WebThingAdapter.h"
