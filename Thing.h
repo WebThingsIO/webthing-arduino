@@ -559,7 +559,9 @@ public:
   void serialize(JsonObject descr, String ip, uint16_t port) {
     descr["id"] = this->id;
     descr["title"] = this->title;
-    descr["@context"] = "  https://www.w3.org/2019/wot/td/v1";
+    JsonArray context = descr.createNestedArray("@context");
+    context.add("https://www.w3.org./2019/wot/td/v1");
+    context.add("https://webthings.io/schemas");
 
     if (this->description != "") {
       descr["description"] = this->description;
