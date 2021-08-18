@@ -11,7 +11,7 @@
 
 #pragma once
 
-#if defined(ESP32) || defined(ESP8266)
+
 
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
@@ -538,4 +538,3 @@ private:
   }
 };
 
-#endif // ESP
