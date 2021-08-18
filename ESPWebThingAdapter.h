@@ -364,7 +364,7 @@ private:
 
     ThingActionObject *obj = action->create(newBuffer);
     if (obj == nullptr) {
-        request->send(404);
+        request->send(500);
         return;
     }
 
