@@ -339,6 +339,7 @@ private:
   void handleThingActionPost(AsyncWebServerRequest *request,
                              ThingDevice *device, ThingAction *action) {
     if (!verifyHost(request)) {
+      Serial.println("Invalid Host");
       return;
     }
 
@@ -351,6 +352,7 @@ private:
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
     auto error = deserializeJson(*newBuffer, (const char *)body_data);
     if (error) { // unable to parse json
+      Serial.println("Unable to parse JSON");
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
       request->send(500);
@@ -360,22 +362,10 @@ private:
 
     JsonObject newAction = newBuffer->as<JsonObject>();
 
-    if (!newAction.containsKey(action->id)) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(400);
-      delete newBuffer;
-      return;
-    }
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
-
+    ThingActionObject *obj = action->create(newBuffer);
     if (obj == nullptr) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
+        request->send(404);
+        return;
     }
 
     DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
@@ -466,23 +456,7 @@ private:
 
     JsonObject newAction = newBuffer->as<JsonObject>();
 
-    if (newAction.size() != 1) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(400);
-      delete newBuffer;
-      return;
-    }
-
     ThingActionObject *obj = device->requestAction(newBuffer);
-
-    if (obj == nullptr) {
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
-    }
 
     DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
     JsonObject item = respBuffer.to<JsonObject>();
