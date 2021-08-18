@@ -54,10 +54,6 @@ private:
   void (*start_fn)(const JsonVariant &);
   void (*cancel_fn)();
 
-#ifndef WITHOUT_WS
-  std::function<void(ThingActionObject *)> notify_fn;
-#endif
-
 public:
   String name;
   DynamicJsonDocument *actionRequest = nullptr;
@@ -75,12 +71,6 @@ public:
         timeRequested("1970-01-01T00:00:00+00:00"), status("created") {
     generateId();
   }
-
-#ifndef WITHOUT_WS
-  void setNotifyFunction(std::function<void(ThingActionObject *)> notify_fn_) {
-    notify_fn = notify_fn_;
-  }
-#endif
 
   void generateId() {
     for (uint8_t i = 0; i < 16; ++i) {
@@ -115,11 +105,6 @@ public:
   void setStatus(const char *s) {
     status = s;
 
-#ifndef WITHOUT_WS
-    if (notify_fn != nullptr) {
-      notify_fn(this);
-    }
-#endif
   }
 
   void start() {
@@ -197,7 +182,7 @@ public:
     // 2.11 Action object: A links array (An array of Link objects linking
     // to one or more representations of an Action resource, each with an
     // implied default rel=action.)
-    JsonArray inline_links = obj.createNestedArray("links");
+    JsonArray inline_links = obj.createNestedArray("forms");
     JsonObject inline_links_prop = inline_links.createNestedObject();
     inline_links_prop["href"] = "/things/" + deviceId + "/actions/" + id;
   }
@@ -297,7 +282,7 @@ public:
     // 2.9 Property object: A links array (An array of Link objects linking
     // to one or more representations of a Property resource, each with an
     // implied default rel=property.)
-    JsonArray inline_links = obj.createNestedArray("links");
+    JsonArray inline_links = obj.createNestedArray("forms");
     JsonObject inline_links_prop = inline_links.createNestedObject();
     inline_links_prop["href"] =
         "/things/" + deviceId + "/" + resourceType + "/" + id;
@@ -361,67 +346,7 @@ public:
     }
   }
 };
-
-#ifndef WITHOUT_WS
-class EventSubscription {
-public:
-  uint32_t id;
-  EventSubscription *next;
-
-  EventSubscription(uint32_t id_) : id(id_) {}
-};
-
-class ThingEvent : public ThingItem {
-private:
-  EventSubscription *subscriptions = nullptr;
-
-public:
-  ThingEvent(const char *id_, const char *description_, ThingDataType type_,
-             const char *atType_)
-      : ThingItem(id_, description_, type_, atType_) {}
-
-  void addSubscription(uint32_t id) {
-    EventSubscription *sub = new EventSubscription(id);
-    sub->next = subscriptions;
-    subscriptions = sub;
-  }
-
-  void removeSubscription(uint32_t id) {
-    EventSubscription *curr = subscriptions;
-    EventSubscription *prev = nullptr;
-    while (curr != nullptr) {
-      if (curr->id == id) {
-        if (prev == nullptr) {
-          subscriptions = curr->next;
-        } else {
-          prev->next = curr->next;
-        }
-
-        delete curr;
-        return;
-      }
-
-      prev = curr;
-      curr = curr->next;
-    }
-  }
-
-  bool isSubscribed(uint32_t id) {
-    EventSubscription *curr = subscriptions;
-    while (curr != nullptr) {
-      if (curr->id == id) {
-        return true;
-      }
-
-      curr = curr->next;
-    }
-
-    return false;
-  }
-};
-#else
 using ThingEvent = ThingItem;
-#endif
 
 class ThingEventObject {
 public:
@@ -460,8 +385,6 @@ public:
       data["data"] = *this->getValue().string;
       break;
     }
-
-    data["timestamp"] = timestamp;
   }
 };
 
@@ -471,9 +394,6 @@ public:
   String title;
   String description;
   const char **type;
-#if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
-  AsyncWebSocket *ws = nullptr;
-#endif
   ThingDevice *next = nullptr;
   ThingProperty *firstProperty = nullptr;
   ThingAction *firstAction = nullptr;
@@ -485,41 +405,7 @@ public:
       : id(_id), title(_title), type(_type) {}
 
   ~ThingDevice() {
-#if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
-    if (ws)
-      delete ws;
-#endif
   }
-
-#ifndef WITHOUT_WS
-  void removeEventSubscriptions(uint32_t id) {
-    ThingEvent *event = firstEvent;
-    while (event != nullptr) {
-      event->removeSubscription(id);
-      event = (ThingEvent *)event->next;
-    }
-  }
-
-  void addEventSubscription(uint32_t id, String eventName) {
-    ThingEvent *event = findEvent(eventName.c_str());
-    if (!event) {
-      return;
-    }
-
-    event->addSubscription(id);
-  }
-
-  void sendActionStatus(ThingActionObject *action) {
-    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-    message["messageType"] = "actionStatus";
-    JsonObject prop = message.createNestedObject("data");
-    action->serialize(prop, id);
-    String jsonStr;
-    serializeJson(message, jsonStr);
-    // Inform all connected ws clients about action statuses
-    ((AsyncWebSocket *)ws)->textAll(jsonStr);
-  }
-#endif
 
   ThingProperty *findProperty(const char *id) {
     ThingProperty *p = this->firstProperty;
@@ -668,37 +554,14 @@ public:
   void queueEventObject(ThingEventObject *obj) {
     obj->next = eventQueue;
     eventQueue = obj;
-
-#ifndef WITHOUT_WS
-    ThingEvent *event = findEvent(obj->name.c_str());
-    if (!event) {
-      return;
-    }
-
-    // * Send events as defined in "4.7 event message"
-    DynamicJsonDocument message(SMALL_JSON_DOCUMENT_SIZE);
-    message["messageType"] = "event";
-    JsonObject data = message.createNestedObject("data");
-    obj->serialize(data);
-    String jsonStr;
-    serializeJson(message, jsonStr);
-
-    // Inform all subscribed ws clients about events
-    for (AsyncWebSocketClient *client :
-         ((AsyncWebSocket *)this->ws)->getClients()) {
-      uint32_t id = client->id();
-
-      if (event->isSubscribed(id)) {
-        ((AsyncWebSocket *)this->ws)->text(id, jsonStr);
-      }
-    }
-#endif
   }
 
   void serialize(JsonObject descr, String ip, uint16_t port) {
     descr["id"] = this->id;
     descr["title"] = this->title;
-    descr["@context"] = "https://webthings.io/schemas";
+    JsonArray context = descr.createNestedArray("@context");
+    context.add("https://www.w3.org./2019/wot/td/v1");
+    context.add("https://webthings.io/schemas");
 
     if (this->description != "") {
       descr["description"] = this->description;
@@ -723,41 +586,17 @@ public:
       typeJson.add(*type);
       type++;
     }
-
-    JsonArray links = descr.createNestedArray("links");
+    
+    JsonArray forms = descr.createNestedArray("forms");
     {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "properties";
-      links_prop["href"] = "/things/" + this->id + "/properties";
+      JsonObject forms_prop = forms.createNestedObject();
+      forms_prop["rel"] = "properties";
+      JsonArray context = forms_prop.createNestedArray("op");
+      context.add("readallproperties");
+      context.add("writeallproperties");
+      forms_prop["href"] = "/things/" + this->id + "/properties";
     }
 
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "actions";
-      links_prop["href"] = "/things/" + this->id + "/actions";
-    }
-
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "events";
-      links_prop["href"] = "/things/" + this->id + "/events";
-    }
-
-#ifndef WITHOUT_WS
-    {
-      JsonObject links_prop = links.createNestedObject();
-      links_prop["rel"] = "alternate";
-
-      if (port != 80) {
-        char buffer[33];
-        itoa(port, buffer, 10);
-        links_prop["href"] =
-            "ws://" + ip + ":" + buffer + "/things/" + this->id;
-      } else {
-        links_prop["href"] = "ws://" + ip + "/things/" + this->id;
-      }
-    }
-#endif
 
     ThingProperty *property = this->firstProperty;
     if (property != nullptr) {
