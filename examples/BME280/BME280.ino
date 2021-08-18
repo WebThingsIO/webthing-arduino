@@ -100,7 +100,7 @@ void setup() {
   Serial.println("BME280I2C connected and initialized.");
 
   // connected, make the LED stay on
-  //digitalWrite(LED_BUILTIN, PIN_STATE_HIGH);
+  digitalWrite(LED_BUILTIN, PIN_STATE_HIGH);
   adapter = new WebThingAdapter("weathersensor", WiFi.localIP());
 
   // Set unit for temperature
