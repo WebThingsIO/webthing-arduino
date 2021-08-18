@@ -131,17 +131,7 @@ public:
                       std::bind(&WebThingAdapter::handleThingPropertiesGet,
                                 this, std::placeholders::_1,
                                 device->firstProperty));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingActionsGet, this,
-                                std::placeholders::_1, device));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_POST,
-                      std::bind(&WebThingAdapter::handleThingActionsPost, this,
-                                std::placeholders::_1, device),
-                      NULL,
-                      std::bind(&WebThingAdapter::handleBody, this,
-                                std::placeholders::_1, std::placeholders::_2,
-                                std::placeholders::_3, std::placeholders::_4,
-                                std::placeholders::_5));
+
       this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
                       std::bind(&WebThingAdapter::handleThingEventsGet, this,
                                 std::placeholders::_1, device));
@@ -415,62 +405,6 @@ private:
     }
     serializeJson(prop, *response);
     request->send(response);
-  }
-
-  void handleThingActionsGet(AsyncWebServerRequest *request,
-                             ThingDevice *device) {
-    if (!verifyHost(request)) {
-      return;
-    }
-    AsyncResponseStream *response =
-        request->beginResponseStream("application/json");
-
-    DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
-    JsonArray queue = doc.to<JsonArray>();
-    device->serializeActionQueue(queue);
-    serializeJson(queue, *response);
-    request->send(response);
-  }
-
-  void handleThingActionsPost(AsyncWebServerRequest *request,
-                              ThingDevice *device) {
-    if (!verifyHost(request)) {
-      return;
-    }
-
-    if (!b_has_body_data) {
-      request->send(422); // unprocessable entity (b/c no body)
-      return;
-    }
-
-    DynamicJsonDocument *newBuffer =
-        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
-    auto error = deserializeJson(*newBuffer, (const char *)body_data);
-    if (error) { // unable to parse json
-      b_has_body_data = false;
-      memset(body_data, 0, sizeof(body_data));
-      request->send(500);
-      delete newBuffer;
-      return;
-    }
-
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
-    ThingActionObject *obj = device->requestAction(newBuffer);
-
-    DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
-    JsonObject item = respBuffer.to<JsonObject>();
-    obj->serialize(item, device->id);
-    String jsonStr;
-    serializeJson(item, jsonStr);
-    AsyncWebServerResponse *response =
-        request->beginResponse(201, "application/json", jsonStr);
-    request->send(response);
-
-    b_has_body_data = false;
-    memset(body_data, 0, sizeof(body_data));
-
-    obj->start();
   }
 
   void handleThingEventsGet(AsyncWebServerRequest *request,
