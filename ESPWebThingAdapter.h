@@ -350,10 +350,9 @@ private:
       return;
     }
 
-    JsonObject newAction = newBuffer->as<JsonObject>();
-
     ThingActionObject *obj = action->create(newBuffer);
     if (obj == nullptr) {
+        memset(body_data, 0, sizeof(body_data));
         request->send(500);
         return;
     }
