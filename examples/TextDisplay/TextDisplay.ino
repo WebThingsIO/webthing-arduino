@@ -1,126 +1,194 @@
-/*********************************************************************
-Web Thing which draws text provided as a property.
-Adapted from the Adafruit SSD1306 example:
-
-This is an example for our Monochrome OLEDs based on SSD1306 drivers
-
-  Pick one up today in the adafruit shop!
-  ------> http://www.adafruit.com/category/63_98
-
-This example is for a 128x64 size display using SPI to communicate
-4 or 5 pins are required to inteface
-
-Adafruit invests time and resources providing this open source code,
-please support Adafruit and open-source hardware by purchasing
-products from Adafruit!
-
-Written by Limor Fried/Ladyada  for Adafruit Industries.
-BSD license, check license.txt for more information
-All text above, and the splash screen must be included in any redistribution
-*********************************************************************/
-
 #include <Arduino.h>
 #include <Thing.h>
 #include <WebThingAdapter.h>
-
-const char *ssid = "...";
-const char *password = "...";
-
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+ 
+#define LARGE_JSON_BUFFERS 1
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define OLED_RESET -1 // Reset pin
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// If using software SPI (the default case):
-#define OLED_MOSI 2
-#define OLED_CLK 16
-#define OLED_DC 0
-#define OLED_CS 13
-#define OLED_RESET 15
-Adafruit_SSD1306 display(OLED_MOSI, OLED_CLK, (int8_t)OLED_DC, OLED_RESET,
-                         OLED_CS);
+// TODO: Hardcode your wifi credentials here (and keep it private)
+const char *ssid = "";
+const char *password = "";
 
-/* Uncomment this block to use hardware SPI
-#define OLED_DC     6
-#define OLED_CS     7
-#define OLED_RESET  8
-Adafruit_SSD1306 display(OLED_DC, OLED_RESET, (int8_t)OLED_CS);
-*/
+#if defined(LED_BUILTIN)
+const int ledPin = LED_BUILTIN;
+#else
+const int ledPin = 13; // manually configure LED pin
+#endif
 
-const int textHeight = 8;
-const int textWidth = 6;
-const int width = 128;
-const int height = 64;
-
+ThingActionObject *action_generator(DynamicJsonDocument *);
 WebThingAdapter *adapter;
 
-const char *textDisplayTypes[] = {"TextDisplay", nullptr};
-ThingDevice textDisplay("textDisplay", "Text display", textDisplayTypes);
-ThingProperty text("text", "", STRING, nullptr);
+const char *oledTypes[] = {"OLED Display", nullptr};
+ThingDevice oledThing("oled", "OLED Display", oledTypes);
 
-String lastText = "moz://a iot";
+StaticJsonDocument<256> oledInput;
+JsonObject oledInputObj = oledInput.to<JsonObject>();
+ThingAction displayAction("display", "Display text", "display a text on OLED",
+                 "displayAction", &oledInputObj, action_generator);
 
-void displayString(const String &str) {
-  int len = str.length();
-  int strWidth = len * textWidth;
-  int strHeight = textHeight;
-  int scale = width / strWidth;
-  if (strHeight > strWidth / 2) {
-    scale = height / strHeight;
-  }
-  int x = width / 2 - strWidth * scale / 2;
-  int y = height / 2 - strHeight * scale / 2;
-
-  display.clearDisplay();
-  display.setTextColor(WHITE);
-  display.setTextSize(scale);
-  display.setCursor(x, y);
-  display.println(str);
-  display.display();
-}
-
-void setup() {
+void setup(void) {
   Serial.begin(115200);
-
-  // by default, we'll generate the high voltage from the 3.3v line internally!
-  // (neat!)
-  display.begin(SSD1306_SWITCHCAPVCC);
-
-  // display the splashscreen as requested :)
+  Serial.println("Initialize...");
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
   display.display();
-  delay(2000);
+  Serial.println("Clear display...");
 
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, HIGH);
+  Serial.println("");
+  Serial.print("Connecting to \"");
+  Serial.print(ssid);
+  Serial.println("\"");
 #if defined(ESP8266) || defined(ESP32)
   WiFi.mode(WIFI_STA);
 #endif
   WiFi.begin(ssid, password);
-  Serial.println("");
-
-  // Wait for connection
+  
+  bool blink = true;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    digitalWrite(ledPin, blink ? LOW : HIGH);
+    blink = !blink;
   }
+  digitalWrite(ledPin, HIGH);
 
   Serial.println("");
   Serial.print("Connected to ");
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-  adapter = new WebThingAdapter("textdisplayer", WiFi.localIP());
 
-  displayString(lastText);
+  adapter = new WebThingAdapter("oled-display", WiFi.localIP());
+  oledThing.description = "A web connected oled display";
 
-  ThingPropertyValue value;
-  value.string = &lastText;
-  text.setValue(value);
+  
+  oledInputObj["type"] = "object";
+    JsonObject oledInputProperties =
+      oledInputObj.createNestedObject("properties");
 
-  textDisplay.addProperty(&text);
-  adapter->addDevice(&textDisplay);
+
+  JsonObject headlineInput =
+      oledInputProperties.createNestedObject("headline");
+  headlineInput["type"] = "string";
+  
+  JsonObject subheadlineInput =
+      oledInputProperties.createNestedObject("subheadline");
+  subheadlineInput["type"] = "string";
+
+    JsonObject bodyInput =
+      oledInputProperties.createNestedObject("body");
+  bodyInput["type"] = "string";
+  
+
+  oledThing.addAction(&displayAction);
+
+  adapter->addDevice(&oledThing);
   adapter->begin();
+
+  Serial.println("HTTP server started");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.print("/things/");
+  Serial.println(oledThing.id);
+
+}
+ 
+#define HEADLINE_MAX_LENGHT 10
+#define SUBHEAD_MAX_LENGTH 23
+#define BODY_MAX_LENGTH 20
+
+char headline[HEADLINE_MAX_LENGHT];
+char subheadline[SUBHEAD_MAX_LENGTH];
+char body[BODY_MAX_LENGTH];
+
+void clear_buffer(){
+  memset(headline, 0, HEADLINE_MAX_LENGHT);
+  memset(subheadline, 0, SUBHEAD_MAX_LENGTH);
+  memset(body, 0, BODY_MAX_LENGTH);
 }
 
-void loop() {
-  adapter->update();
-  displayString(lastText);
+int rounds = 0;
+ 
+void loop() 
+{
+  if(strlen(headline) > 0 || strlen(subheadline) > 0 || strlen(body) > 0){
+    display.clearDisplay();
+    delay(250);
+    display.display();
+    display.setCursor(0,0); 
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.println(headline);
+
+    display.setCursor(0,15);  
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.println(subheadline);
+    display.setCursor(0,30);
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.println(body);
+    delay(250);
+    display.display();
+    clear_buffer();
+    rounds = 1;
+  }else if(rounds > 0){
+      //To avoid burning, clear after 30 seconds.
+      if(rounds == 300){
+          display.clearDisplay();
+          delay(250);
+          display.display();
+          rounds = 0;
+      }else{
+          delay(100);
+          rounds++;
+      }
+  }
+}
+
+void do_display(const JsonVariant &input) {
+  Serial.println("do display...");
+   
+  JsonObject inputObj = input.as<JsonObject>();
+  display.clearDisplay();
+  display.display();
+  String headline_tmp = inputObj["headline"];
+  String subheadline_tmp = inputObj["subheadline"];
+  String body_tmp = inputObj["body"];
+  clear_buffer();
+
+  size_t length = strlen(headline_tmp.c_str());
+  if(length > HEADLINE_MAX_LENGHT){
+      Serial.println("Headline is too long");
+      return;
+  }else{
+    memcpy(headline, headline_tmp.c_str(), length);
+  }
+  length = strlen(subheadline_tmp.c_str());
+  if(length > SUBHEAD_MAX_LENGTH){
+      Serial.println("Subheadline is too long");
+      return;
+  }else{
+      memcpy(subheadline, subheadline_tmp.c_str(), length);
+  }
+  length = strlen(body_tmp.c_str());
+  if(length > BODY_MAX_LENGTH){
+      Serial.println("Body is too long");
+      return;
+  }else{
+      memcpy(body, body_tmp.c_str(), length);
+  }
+}
+
+ThingActionObject *action_generator(DynamicJsonDocument *input) {
+  return new ThingActionObject("display", input, do_display, nullptr);
 }
