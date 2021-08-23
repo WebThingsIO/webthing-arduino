@@ -558,7 +558,7 @@ public:
     descr["id"] = "uri:" + this->id;
     descr["title"] = this->title;
     JsonArray context = descr.createNestedArray("@context");
-    context.add("https://www.w3.org./2019/wot/td/v1");
+    context.add("https://www.w3.org/2019/wot/td/v1");
     context.add("https://webthings.io/schemas");
 
     if (this->description != "") {
