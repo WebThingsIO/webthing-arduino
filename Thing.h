@@ -89,8 +89,7 @@ public:
     JsonObject data = obj.createNestedObject(name);
 
     JsonObject actionObj = actionRequest->as<JsonObject>();
-    JsonObject inner = actionObj[name];
-    data["input"] = inner["input"];
+    data["input"] = actionObj;
 
     data["status"] = status;
     data["timeRequested"] = timeRequested;
@@ -111,8 +110,7 @@ public:
     setStatus("pending");
 
     JsonObject actionObj = actionRequest->as<JsonObject>();
-    JsonObject inner = actionObj[name];
-    start_fn(inner["input"]);
+    start_fn(actionObj);
 
     finish();
   }

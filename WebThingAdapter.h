@@ -10,4 +10,6 @@
 
 #pragma once
 
+#if defined(ESP32) || defined(ESP8266)
 #include "ESPWebThingAdapter.h"
+#endif
