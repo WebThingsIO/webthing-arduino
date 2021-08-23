@@ -555,7 +555,7 @@ public:
   }
 
   void serialize(JsonObject descr, String ip, uint16_t port) {
-    descr["id"] = this->id;
+    descr["id"] = "uri:" + this->id;
     descr["title"] = this->title;
     JsonArray context = descr.createNestedArray("@context");
     context.add("https://www.w3.org./2019/wot/td/v1");
