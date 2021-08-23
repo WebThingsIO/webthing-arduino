@@ -585,20 +585,17 @@ public:
       typeJson.add(*type);
       type++;
     }
-    
-    JsonArray forms = descr.createNestedArray("forms");
-    {
+
+    ThingProperty *property = this->firstProperty;
+    if (property != nullptr) {
+      JsonArray forms = descr.createNestedArray("forms");
       JsonObject forms_prop = forms.createNestedObject();
       forms_prop["rel"] = "properties";
       JsonArray context = forms_prop.createNestedArray("op");
       context.add("readallproperties");
       context.add("writeallproperties");
       forms_prop["href"] = "/things/" + this->id + "/properties";
-    }
 
-
-    ThingProperty *property = this->firstProperty;
-    if (property != nullptr) {
       JsonObject properties = descr.createNestedObject("properties");
       while (property != nullptr) {
         JsonObject obj = properties.createNestedObject(property->id);
