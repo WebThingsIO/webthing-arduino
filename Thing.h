@@ -576,7 +576,8 @@ public:
         descr.createNestedObject("securityDefinitions");
     JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
-    descr["security"] = "nosec_sc";
+    JsonArray securityJson = descr.createNestedArray("security");
+    securityJson.add("nosec_sc");
 
     JsonArray typeJson = descr.createNestedArray("@type");
     const char **type = this->type;
