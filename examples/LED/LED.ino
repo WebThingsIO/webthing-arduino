@@ -7,18 +7,20 @@
 #define LARGE_JSON_BUFFERS 1
 
 #include <Arduino.h>
-#include <Thing.h>
-#include <WebThingAdapter.h>
+#include "Thing.h"
+#include "WebThingAdapter.h"
 
 // TODO: Hardcode your wifi credentials here (and keep it private)
 const char *ssid = "";
 const char *password = "";
 
 #if defined(LED_BUILTIN)
-const int lampPin = LED_BUILTIN;
+const int ledPin = LED_BUILTIN;
 #else
-const int lampPin = 13; // manually configure LED pin
+const int ledPin = 19; // manually configure LED pin
 #endif
+
+const int externalPin = 19;
 
 ThingActionObject *action_generator(DynamicJsonDocument *);
 
@@ -35,27 +37,25 @@ JsonObject toggleInputObj = toggleInput.to<JsonObject>();
 ThingAction toggle("toggle", "Toggle", "toggle the lamp on/off",
                  "ToggleAction", &toggleInputObj, action_generator);
 
-bool lastOn = true;
-
 void setup(void) {
-  pinMode(lampPin, OUTPUT);
-  digitalWrite(lampPin, HIGH);
+  pinMode(ledPin, OUTPUT);
+  pinMode(externalPin, OUTPUT);
+  digitalWrite(ledPin, HIGH);
   Serial.begin(115200);
   Serial.println("");
   Serial.print("Connecting to \"");
   Serial.print(ssid);
   Serial.println("\"");
-#if defined(ESP8266) || defined(ESP32)
-  WiFi.mode(WIFI_STA);
-#endif
   WiFi.begin(ssid, password);
-  Serial.println("");
-
-  // Wait for connection
+  
+  bool blink = true;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    digitalWrite(ledPin, blink ? LOW : HIGH); // active low led
+    blink = !blink;
   }
+  digitalWrite(ledPin, HIGH); // active low led
 
   Serial.println("");
   Serial.print("Connected to ");
@@ -64,7 +64,7 @@ void setup(void) {
   Serial.println(WiFi.localIP());
   adapter = new WebThingAdapter("led-lamp", WiFi.localIP());
 
-  lamp.description = "A web connected lamp";
+  lamp.description = "A web connected led";
 
   lampOn.title = "On/Off";
   lamp.addProperty(&lampOn);
@@ -87,19 +87,21 @@ void setup(void) {
   Serial.println(lamp.id);
 
   // set initial values
-  ThingPropertyValue initialOn = {.boolean = true};
+  ThingPropertyValue initialOn = {.boolean = false};
   lampOn.setValue(initialOn);
+  digitalWrite(externalPin, LOW);
   (void)lampOn.changedValueOrNull();
 
 }
-
+bool lastOn = false;
 void loop(void) {
   adapter->update();
   bool on = lampOn.getValue().boolean;
+
   if (on) {
-    digitalWrite(lampPin, HIGH);
+    digitalWrite(externalPin, HIGH);
   } else {
-    digitalWrite(lampPin, LOW);
+    digitalWrite(externalPin, LOW);
   }
 
   if (lastOn != on) {
@@ -115,12 +117,6 @@ void do_toggle(const JsonVariant &input) {
 
   Serial.print("state: ");
   Serial.println(state);
-
-  if (state) {
-    digitalWrite(lampPin, HIGH);
-  } else {
-    digitalWrite(lampPin, LOW);
-  }
 
   ThingDataValue value = {.boolean = state};
   lampOn.setValue(value);
