@@ -9,15 +9,6 @@ Available examples
 - [LED](/examples/LED)
 - [OLED display](/examples/TextDisplay)
 
-A simple server for ESP32, boards with Ethernet, or any
-WiFi101-compatible board that implements Mozilla's proposed Web of Things API.
-The [LED
-example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LED)
-exposes an OnOffSwitch named "Built-in LED" which controls the board's built-in
-LED. The [LED Lamp
-example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LEDLamp)
-ups the ante by introducing a `level` property to expose a dimmable Light.
-
 ## Installation
 
 1. Download and install [ArduinoJSON](https://arduinojson.org/v6/doc/installation/)
