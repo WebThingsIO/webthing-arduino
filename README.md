@@ -25,18 +25,7 @@ ups the ante by introducing a `level` property to expose a dimmable Light.
 1. Download the code as ZIP file `Code -> Download ZIP`
 2. Install the library in the Arduino IDE `Sketch -> Include Library -> Add ZIP Library...`
 
-### Continuing onwards
-
-Make sure to install the current release of the ArduinoJson library (6) if you
-don't have it installed already.
-
-![ArduinoJson install process](https://github.com/WebThingsIO/webthing-arduino/raw/master/docs/arduinojson.png)
-
-Next, download this library from the same library manager by searching for
-`webthing`.
-
-![add zip library and LED example](https://github.com/WebThingsIO/webthing-arduino/raw/master/docs/add-library-open-example.png)
-
+### Start development
 
 You should upload one of the example applications to your board. 
 The Web of Things Thing Description is available under `/.well-known/wot-thing-description`. 
