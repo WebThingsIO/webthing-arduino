@@ -3,7 +3,13 @@
 webthing-arduino
 ================
 
-A simple server for the ESP8266, the ESP32, boards with Ethernet, or any
+A simple Web of Things Thing Description compatible library, for the ESP32. 
+Available examples
+- [BME280](/examples/BME280)
+- [LED](/examples/LED)
+- [OLED display](/examples/TextDisplay)
+
+A simple server for ESP32, boards with Ethernet, or any
 WiFi101-compatible board that implements Mozilla's proposed Web of Things API.
 The [LED
 example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LED)
@@ -12,25 +18,12 @@ LED. The [LED Lamp
 example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LEDLamp)
 ups the ante by introducing a `level` property to expose a dimmable Light.
 
-## Arduino
+## Installation
 
-### ESP8266 or ESP32
-
-To run on either of these boards, download the Arduino IDE and set it up for
-board-specific development. These Adafruit guides explain [how to set up for an
-ESP8266](https://learn.adafruit.com/adafruit-feather-huzzah-esp8266/using-arduino-ide)
-and [how to set up for an
-ESP32](https://learn.adafruit.com/adafruit-huzzah32-esp32-feather/using-with-arduino-ide).
-You will also need to download the [ESP Async
-WebServer](https://github.com/me-no-dev/ESPAsyncWebServer/) library and unpack
-it in your sketchbook's libraries folder.
-
-### MKR1000, MKR1010, etc.
-
-* MKR1000 (and similar): Install the WiFi101 library from the Arduino library
-  manager.
-* MKR1010 (and similar): Install the WiFiNINA library from the Arduino library
-  manager.
+1. Download and install [ArduinoJSON](https://arduinojson.org/v6/doc/installation/)
+1. Download and install [ESP Async WebServer](https://github.com/me-no-dev/ESPAsyncWebServer/) 
+1. Download the code as ZIP file `Code -> Download ZIP`
+2. Install the library in the Arduino IDE `Sketch -> Include Library -> Add ZIP Library...`
 
 ### Continuing onwards
 
@@ -44,24 +37,53 @@ Next, download this library from the same library manager by searching for
 
 ![add zip library and LED example](https://github.com/WebThingsIO/webthing-arduino/raw/master/docs/add-library-open-example.png)
 
-You should be able to upload the example sketch onto your board and use it as a
-simple Web Thing. This Web Thing can be talked to using the WoT API or added to
-the WebThings Gateway using the "Add Thing by URL" feature. Note that
-right now, WiFi101-based Things must be manually added by typing the full URL
-to the Web Thing, e.g. `http://192.168.0.103/things/led`.
+
+You should upload one of the example applications to your board. 
+The Web of Things Thing Description is available under `/.well-known/wot-thing-description`. 
+All available actions and properties are described in the Thing Description. 
 
 If you want to create a Web Thing from scratch, make sure to include both
-"Thing.h" and "WebThingAdapter.h" (or "EthernetWebThingAdapter.h", if using an
-Ethernet board). You can then add Things and Properties to your board using our
-proposed API.
+"Thing.h" and "WebThingAdapter.h".
+You can then add Actions and Properties to your board.
 
-## PlatformIO
+**Properties**
+```c++
+WebThingAdapter *adapter;
 
-Add the `webthing-arduino` library through PlatformIO's package management
-interface. Ensure that you get the latest release by examining the entries
-in the version number dropdown list. It may be sorted counter-intuitively.
-You may also need to manually add the ArduinoJson and other libraries to 
-your project.
+ThingProperty weatherTemp("temperature", "", NUMBER, "TemperatureProperty");
+
+const char *bme280Types[] = {"TemperatureSensor", nullptr};
+ThingDevice weather("bme280", "BME280 Weather Sensor", bme280Types);
+
+weather.addProperty(&weatherTemp);
+adapter->addDevice(&weather);
+
+```
+
+**Actions**
+```c++
+WebThingAdapter *adapter;
+ThingActionObject *action_generator(DynamicJsonDocument *);
+
+StaticJsonDocument<256> oledInput;
+JsonObject oledInputObj = oledInput.to<JsonObject>();
+ThingAction displayAction("display", "Display text", "display a text on OLED",
+                 "displayAction", &oledInputObj, action_generator);
+
+const char *displayTypes[] = {"OLED Display", nullptr};
+ThingDevice displayThing("oled", "OLED Display", displayTypes);
+
+oledThing.addAction(&displayAction);
+adapter->addDevice(&displayThing);
+
+void do_display(const JsonVariant &input){
+  println("Action request");
+}
+
+ThingActionObject *action_generator(DynamicJsonDocument *input) {
+  return new ThingActionObject("display", input, callback, nullptr);
+}
+```
 
 ## Example
 
@@ -162,6 +184,3 @@ void loop(void) {
     #include <WebThingAdapter.h>
     ```
 
-# Adding to Gateway
-
-To add your web thing to the WebThings Gateway, install the "Web Thing" add-on and follow the instructions [here](https://github.com/WebThingsIO/thing-url-adapter#readme).
