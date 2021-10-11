@@ -3,16 +3,36 @@
 webthing-arduino
 ================
 
-A simple server for the ESP8266, the ESP32, boards with Ethernet, or any
-WiFi101-compatible board that implements Mozilla's proposed Web of Things API.
-The [LED
-example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LED)
-exposes an OnOffSwitch named "Built-in LED" which controls the board's built-in
-LED. The [LED Lamp
-example](https://github.com/WebThingsIO/webthing-arduino/blob/master/examples/LEDLamp)
-ups the ante by introducing a `level` property to expose a dimmable Light.
+A simple Web of Things Thing Description compatible library, for the ESP32 mainly.
+Available examples
+- [BME280](/examples/BME280)
+- [LED](/examples/LED)
+- [OLED display](/examples/TextDisplay)
 
-## Arduino
+## Beginner Tutorials
+
+If you need a more extensive explanation of the usage of this library, we have some step by step tutorials available with more context.
+
+### WebThings Arduino + Node-WoT
+
+[Node-WoT](https://github.com/eclipse/thingweb.node-wot) is a Javascript client library to consume Web of Things devices.
+
+- [Show number of Github forks and stars on Matrix display](https://bind.systems/blog/web-of-things-github-forks-stars/)
+- [Run speedtest and show results on an OLED display](https://bind.systems/blog/web-of-things-speedtest/)
+
+### WebThings Arduino + Node-RED
+
+[Node-RED](https://nodered.org/) is a drag and drop tool for connecting devices. It requires little Javascript programming knowledge.
+
+- [Connect temperature sensor to OLED display](https://bind.systems/blog/web-of-things-node-red-temperature-oled/)
+
+### WebThings Arduino
+
+- [Blinking LED](https://bind.systems/blog/web-of-things-led/)
+- [Matrix display](https://bind.systems/blog/web-of-things-arduino-matrix-display/)
+- [OLED display](https://bind.systems/blog/web-of-things-arduino-oled/)
+
+## Installation
 
 ### ESP8266 or ESP32
 
@@ -31,29 +51,6 @@ it in your sketchbook's libraries folder.
   manager.
 * MKR1010 (and similar): Install the WiFiNINA library from the Arduino library
   manager.
-
-### Continuing onwards
-
-Make sure to install the current release of the ArduinoJson library (6) if you
-don't have it installed already.
-
-![ArduinoJson install process](https://github.com/WebThingsIO/webthing-arduino/raw/master/docs/arduinojson.png)
-
-Next, download this library from the same library manager by searching for
-`webthing`.
-
-![add zip library and LED example](https://github.com/WebThingsIO/webthing-arduino/raw/master/docs/add-library-open-example.png)
-
-You should be able to upload the example sketch onto your board and use it as a
-simple Web Thing. This Web Thing can be talked to using the WoT API or added to
-the WebThings Gateway using the "Add Thing by URL" feature. Note that
-right now, WiFi101-based Things must be manually added by typing the full URL
-to the Web Thing, e.g. `http://192.168.0.103/things/led`.
-
-If you want to create a Web Thing from scratch, make sure to include both
-"Thing.h" and "WebThingAdapter.h" (or "EthernetWebThingAdapter.h", if using an
-Ethernet board). You can then add Things and Properties to your board using our
-proposed API.
 
 ## PlatformIO
 
