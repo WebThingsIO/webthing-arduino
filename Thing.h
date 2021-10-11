@@ -555,10 +555,10 @@ public:
   }
 
   void serialize(JsonObject descr, String ip, uint16_t port) {
-    descr["id"] = this->id;
+    descr["id"] = "uri:" + this->id;
     descr["title"] = this->title;
     JsonArray context = descr.createNestedArray("@context");
-    context.add("https://www.w3.org./2019/wot/td/v1");
+    context.add("https://www.w3.org/2019/wot/td/v1");
 
     if (this->description != "") {
       descr["description"] = this->description;
@@ -575,7 +575,8 @@ public:
         descr.createNestedObject("securityDefinitions");
     JsonObject nosecSc = securityDefinitions.createNestedObject("nosec_sc");
     nosecSc["scheme"] = "nosec";
-    descr["security"] = "nosec_sc";
+    JsonArray securityJson = descr.createNestedArray("security");
+    securityJson.add("nosec_sc");
 
     JsonArray typeJson = descr.createNestedArray("@type");
     const char **type = this->type;
@@ -583,20 +584,17 @@ public:
       typeJson.add(*type);
       type++;
     }
-    
-    JsonArray forms = descr.createNestedArray("forms");
-    {
+
+    ThingProperty *property = this->firstProperty;
+    if (property != nullptr) {
+      JsonArray forms = descr.createNestedArray("forms");
       JsonObject forms_prop = forms.createNestedObject();
       forms_prop["rel"] = "properties";
       JsonArray context = forms_prop.createNestedArray("op");
       context.add("readallproperties");
       context.add("writeallproperties");
       forms_prop["href"] = "/things/" + this->id + "/properties";
-    }
 
-
-    ThingProperty *property = this->firstProperty;
-    if (property != nullptr) {
       JsonObject properties = descr.createNestedObject("properties");
       while (property != nullptr) {
         JsonObject obj = properties.createNestedObject(property->id);
