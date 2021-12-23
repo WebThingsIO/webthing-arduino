@@ -470,6 +470,7 @@ public:
   String id;
   String title;
   String description;
+  JsonObject context;
   const char **type;
 #if !defined(WITHOUT_WS) && (defined(ESP8266) || defined(ESP32))
   AsyncWebSocket *ws = nullptr;
@@ -480,6 +481,9 @@ public:
   ThingActionObject *actionQueue = nullptr;
   ThingEvent *firstEvent = nullptr;
   ThingEventObject *eventQueue = nullptr;
+
+  ThingDevice(const char *_id, const char *_title, const char **_type, JsonObject _context)
+      : id(_id), title(_title), type(_type), context(_context) {}
 
   ThingDevice(const char *_id, const char *_title, const char **_type)
       : id(_id), title(_title), type(_type) {}
@@ -698,7 +702,11 @@ public:
   void serialize(JsonObject descr, String ip, uint16_t port) {
     descr["id"] = this->id;
     descr["title"] = this->title;
-    descr["@context"] = "https://webthings.io/schemas";
+    if (this->context) {
+        descr["@context"] = this->context;
+    } else {
+        descr["@context"] = "https://webthings.io/schemas";
+    }
 
     if (this->description != "") {
       descr["description"] = this->description;
