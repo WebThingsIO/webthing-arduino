@@ -360,6 +360,10 @@ public:
       callback(newValue);
     }
   }
+  bool isInRange(ThingDataValue value){
+    return (this->maximum < this->minimum) //to check if minimum and maximum values are asigned
+    || (this->maximum > value.)
+  }
 };
 
 #ifndef WITHOUT_WS
@@ -578,7 +582,8 @@ public:
 
   void setProperty(const char *name, const JsonVariant &newValue) {
     ThingProperty *property = findProperty(name);
-
+    if(property->readOnly)
+      return;
     if (property == nullptr) {
       return;
     }
@@ -597,15 +602,19 @@ public:
     case NUMBER: {
       ThingDataValue value;
       value.number = newValue.as<double>();
-      property->setValue(value);
-      property->changed(value);
+      if((property->maximum < property->minimum) || (property->maximum > value && property->minimum < value)){
+        property->setValue(value);
+        property->changed(value);
+      }
       break;
     }
     case INTEGER: {
       ThingDataValue value;
       value.integer = newValue.as<signed long long>();
-      property->setValue(value);
-      property->changed(value);
+      if((property->maximum < property->minimum) || (property->maximum > value && property->minimum < value)){
+        property->setValue(value);
+        property->changed(value);
+      }
       break;
     }
     case STRING:
