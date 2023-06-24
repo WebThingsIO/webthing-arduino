@@ -360,10 +360,6 @@ public:
       callback(newValue);
     }
   }
-  bool isInRange(ThingDataValue value){
-    return (this->maximum < this->minimum) //to check if minimum and maximum values are asigned
-    || (this->maximum > value.)
-  }
 };
 
 #ifndef WITHOUT_WS
@@ -602,7 +598,7 @@ public:
     case NUMBER: {
       ThingDataValue value;
       value.number = newValue.as<double>();
-      if((property->maximum < property->minimum) || (property->maximum > value && property->minimum < value)){
+      if((property->maximum < property->minimum) || (property->maximum > value.number && property->minimum < value.number)){
         property->setValue(value);
         property->changed(value);
       }
@@ -611,7 +607,7 @@ public:
     case INTEGER: {
       ThingDataValue value;
       value.integer = newValue.as<signed long long>();
-      if((property->maximum < property->minimum) || (property->maximum > value && property->minimum < value)){
+      if((property->maximum < property->minimum) || (property->maximum > value.integer && property->minimum < value.integer)){
         property->setValue(value);
         property->changed(value);
       }
