@@ -578,7 +578,8 @@ public:
 
   void setProperty(const char *name, const JsonVariant &newValue) {
     ThingProperty *property = findProperty(name);
-
+    if(property->readOnly)
+      return;
     if (property == nullptr) {
       return;
     }
@@ -597,15 +598,19 @@ public:
     case NUMBER: {
       ThingDataValue value;
       value.number = newValue.as<double>();
-      property->setValue(value);
-      property->changed(value);
+      if((property->maximum < property->minimum) || (property->maximum > value.number && property->minimum < value.number)){
+        property->setValue(value);
+        property->changed(value);
+      }
       break;
     }
     case INTEGER: {
       ThingDataValue value;
       value.integer = newValue.as<signed long long>();
-      property->setValue(value);
-      property->changed(value);
+      if((property->maximum < property->minimum) || (property->maximum > value.integer && property->minimum < value.integer)){
+        property->setValue(value);
+        property->changed(value);
+      }
       break;
     }
     case STRING:
